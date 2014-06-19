@@ -35,10 +35,10 @@ Inherits TCPSocket
 		    'End If
 		    'End If
 		    
-		    If context.header(MyHTTPServerModule.kheadercontentlength) <> "" Then
+		    If context.Headers.HasKey("Content-Length") Then
 		      // Now we know there is entity data in this request.
 		      
-		      entitylength = Val(context.header(MyHTTPServerModule.kheadercontentlength))
+		      entitylength = Val(context.Headers.Lookup("Content-Length", ""))
 		      requestlength = headerslength + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf) + entitylength
 		      lalength = LenB(la)
 		      If LenB(la) >= requestlength Then

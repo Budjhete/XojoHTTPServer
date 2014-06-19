@@ -2,7 +2,7 @@
 Protected Class MyHTTPRequest
 	#tag Method, Flags = &h0
 		Sub Constructor()
-		  Dim d As New Date
+		  Dim pNow As New Date
 		  
 		  Me.Headers = New Dictionary
 		  Me.RequestHeaders = New Dictionary
@@ -10,33 +10,23 @@ Protected Class MyHTTPRequest
 		  Me.Variables = New Dictionary
 		  
 		  // Header Date
-		  Me.Headers.Value(MyHTTPServerModule.kHeaderDate) = d.HTTPDate
+		  Me.Headers.Value("Date") = pNow.HTTPDate
 		  
 		  // Expire Date
-		  d.Minute = d.Minute' + 60
-		  Me.Headers.Value(MyHTTPServerModule.kHeaderExpires) = d.HTTPDate
+		  pNow.Minute = pNow.Minute' + 60
+		  Me.Headers.Value("Expires") = pNow.HTTPDate
 		  
 		  // Default Content Type
 		  Me.Headers.Value(MyHTTPServerModule.kHeaderContentType) = "text/html"
 		  
-		  // Default Host
-		  Me.Headers.Value(MyHTTPServerModule.kHeaderHost) = "127.0.0.1"
-		  
-		  // Default Method
-		  Me.Method = MyHTTPRequest.GET
-		  
-		  // Default Output
-		  Me.Status = MyHTTPServerModule.kStatusNotFound
-		  Me.Body = MyHTTPServerModule.HTTPErrorHTML(Me.Status)
+		  // Default Headers
+		  Me.Headers.Value("Content-Type") = "text/html; charset=utf-8"
+		  Me.Headers.Value("Connection") = "close"
+		  Me.Headers.Value("Host") = "127.0.0.1"
+		  Me.Headers.Value("X-Powered-By") = "MyHTTPServer"
 		  
 		  System.DebugLog "HTTPServRequestContext: Constuct Request Context"
 		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function Cookie(Name As String) As String
-		  Return Me.Cookies.Lookup(name, "")
-		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
@@ -46,46 +36,43 @@ Protected Class MyHTTPRequest
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function Header(Key As String) As String
-		  If requestheaders.haskey(key) Then
-		    Return requestheaders.value(key).stringvalue
-		  Else
-		    Return ""
-		  End
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
 		Sub LoadRequestParameters(FromString As String)
 		  Dim lines() As String
 		  Dim i As Integer
 		  Dim key,value As String
 		  
-		  requestheaders = New dictionary
-		  
 		  // load request headers
+		  Me.RequestHeaders = New Dictionary
 		  lines = fromstring.Split(MyHTTPServerModule.crlf)
 		  lines.remove 0
 		  For i = 0 To ubound(lines)
 		    key = Left(lines(i),InStr(lines(i),":") - 1)
 		    value = Right(lines(i),Len(lines(i)) - (Len(key) + Len(": ")))
 		    value = URLDecode(value)
-		    requestheaders.value(key) = value
+		    RequestHeaders.value(key) = value
 		  Next
 		  
 		  // process request headers
-		  Me.cookies = New dictionary
-		  lines = header(MyHTTPServerModule.kheadercookie).Split("; ")
+		  Me.Cookies = New Dictionary
+		  lines = Me.Headers.Lookup("Cookie", "").Split("; ")
 		  For i = 0 To ubound(lines)
 		    key = Left(lines(i),InStr(lines(i),"=") - 1)
 		    value = Right(lines(i),Len(lines(i)) - (Len(key) + Len("=")))
 		    value = URLDecode(value)
-		    Me.cookies.value(key) = value
+		    Me.Cookies.Value(key) = value
 		  Next
 		  
-		  Dim sessionid As Integer
-		  sessionid = Val(Me.cookie("session-id"))
-		  psession = MyHTTPServerModule.findsession(sessionid)
+		  Dim pSessionID As Integer = Val(Me.Cookies.Lookup("session-id", ""))
+		  Me.Session = MyHTTPServerModule.FindSession(pSessionID)
+		  
+		  If Me.Session = Nil Then
+		    
+		    pSessionID = MyHTTPServerModule.createsession.Identifier
+		    Me.SetCookie("session-id", Str(pSessionID))
+		    
+		    System.DebugLog "Created a new session with id " + Str(pSessionID)
+		    
+		  End If
 		End Sub
 	#tag EndMethod
 
@@ -108,29 +95,6 @@ Protected Class MyHTTPRequest
 		    End
 		  Next
 		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Sub Print(Text As String)
-		  If Me.unused Then
-		    Me.unused = False
-		    Me.Body = ""
-		  End
-		  Me.Body = Me.Body + text
-		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function Session() As MyHTTPServerSession
-		  Dim s As MyHTTPServerSession
-		  If psession = Nil Then
-		    s = MyHTTPServerModule.createsession
-		    Me.setcookie("session-id",Str(s.identifier))
-		  Else
-		    s = psession
-		  End
-		  Return s
-		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
@@ -157,16 +121,6 @@ Protected Class MyHTTPRequest
 		End Sub
 	#tag EndMethod
 
-	#tag Method, Flags = &h0
-		Function Variable(Name As String) As String
-		  If Me.variables.haskey(name) Then
-		    Return Me.variables.value(name)
-		  Else
-		    Return ""
-		  End
-		End Function
-	#tag EndMethod
-
 
 	#tag Property, Flags = &h0
 		Body As String
@@ -185,31 +139,27 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		Method As String
-	#tag EndProperty
-
-	#tag Property, Flags = &h21
-		Private pSession As MyHTTPServerSession
-	#tag EndProperty
-
-	#tag Property, Flags = &h21
-		Private RequestHeaders As Dictionary
+		Method As String = "GET"
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		Status As Integer
+		RequestHeaders As Dictionary
 	#tag EndProperty
 
-	#tag Property, Flags = &h21
-		Private Unused As Boolean = True
+	#tag Property, Flags = &h0
+		Session As MyHTTPServerSession
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Status As Integer = 200
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
 		URL As String
 	#tag EndProperty
 
-	#tag Property, Flags = &h21
-		Private Variables As Dictionary
+	#tag Property, Flags = &h0
+		Variables As Dictionary
 	#tag EndProperty
 
 

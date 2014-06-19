@@ -50,11 +50,10 @@ Inherits ServerSocket
 
 	#tag Method, Flags = &h0
 		Sub Constructor()
-		  System.DebugLog "HTTPServSock: Constuct"
+		  System.DebugLog "Initializing the HTTPServerSocket..."
 		  
-		  Me.port = MyHTTPServerModule.kDefaultPort
-		  Me.urls = New dictionary
-		  Me.indexfiles.append("index.html")
+		  Me.Port = MyHTTPServerModule.kDefaultPort
+		  Me.URLs = New Dictionary
 		End Sub
 	#tag EndMethod
 
@@ -130,6 +129,7 @@ Inherits ServerSocket
 	#tag Method, Flags = &h0
 		Sub Listen()
 		  System.Log(System.LogLevelInformation, "Start listening on port " + Str(Me.Port))
+		  
 		  Super.Listen
 		End Sub
 	#tag EndMethod
@@ -169,10 +169,6 @@ Inherits ServerSocket
 
 	#tag Property, Flags = &h0
 		ClientTimeOut As Integer = 10
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		IndexFiles() As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
