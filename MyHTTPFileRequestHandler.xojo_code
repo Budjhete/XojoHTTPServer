@@ -3,7 +3,8 @@ Protected Class MyHTTPFileRequestHandler
 Implements MyHTTPRequestHandler
 	#tag Method, Flags = &h0
 		Sub Constructor(pRoot As FolderItem)
-		  
+		  // The handler will serve files under the root FolderItem
+		  mRoot = pRoot
 		End Sub
 	#tag EndMethod
 
@@ -27,15 +28,15 @@ Implements MyHTTPRequestHandler
 		      
 		      // List directory content
 		      
-		      pRequest.Buffer = "<h2>" + pFolderItem.DisplayName + "</h2>"
+		      pRequest.Body = "<h2>" + pFolderItem.DisplayName + "</h2>"
 		      
-		      pRequest.Buffer = pRequest.Buffer + "<ul>"
+		      pRequest.Body = pRequest.Body + "<ul>"
 		      
 		      For pIndex As Integer = 0 To pFolderItem.Count - 1
-		        pRequest.Buffer = pRequest.Buffer + "<li><a href='" + pFolderItem.Item(pIndex).Name + "'" + pFolderItem.Item(pIndex).DisplayName + "</a></li>"
+		        pRequest.Body = pRequest.Body + "<li><a href='" + pFolderItem.Item(pIndex).Name + "'" + pFolderItem.Item(pIndex).DisplayName + "</a></li>"
 		      Next
 		      
-		      pRequest.Buffer = pRequest.Buffer + "</ul>"
+		      pRequest.Body = pRequest.Body + "</ul>"
 		      
 		    Else
 		      
@@ -43,8 +44,8 @@ Implements MyHTTPRequestHandler
 		      
 		    End If
 		    
-		    pRequest.StatusCode = 404
-		    pRequest.Buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.StatusCode)
+		    pRequest.Status = 404
+		    pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)
 		    
 		  End If
 		  

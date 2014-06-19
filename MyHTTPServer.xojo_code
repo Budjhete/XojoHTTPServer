@@ -113,28 +113,29 @@ Inherits TCPSocket
 		      Else
 		        
 		        // Bad request
-		        context.StatusCode = MyHTTPServerModule.kStatusBadRequest
-		        context.Buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
+		        context.Status = MyHTTPServerModule.kStatusBadRequest
+		        context.Body = MyHTTPServerModule.HTTPErrorHTML(context.Status)
 		        
 		      End If
 		      
 		      // HTTP requests rely on the Content-Length header. Rather than require the user to set
 		      // the header, we simply add it based on the buffer size.
-		      context.headers.value(MyHTTPServerModule.kheadercontentlength) = LenB(context.buffer)
+		      context.headers.value(MyHTTPServerModule.kheadercontentlength) = LenB(context.Body)
 		      
 		      context.headers.value(MyHTTPServerModule.kHeaderConnection) = "close"
 		      
 		      context.headers.value(MyHTTPServerModule.kHeaderServer) = MyHTTPServerModule.VersionLongString
 		      
-		      
 		      // Now we pipe the data back to the client
-		      Me.write(MyHTTPServerModule.kversion + " " + HTTPStatusString(context.statuscode) + MyHTTPServerModule.crlf)
+		      Me.write(MyHTTPServerModule.kversion + " " + HTTPStatusString(context.Status) + MyHTTPServerModule.crlf)
+		      
 		      For i = 0 To context.headers.count - 1
 		        'Me.write(context.headers.key(i).stringvalue + ": " + URLEncode(context.headers.value(context.headers.key(i)).stringvalue) + MyHTTPServerModule.crlf)
 		        Me.write(context.headers.key(i).stringvalue + ": " + context.headers.value(context.headers.key(i)).stringvalue + MyHTTPServerModule.crlf)
 		      Next
+		      
 		      Me.write(MyHTTPServerModule.crlf)
-		      Me.write(context.buffer)
+		      Me.write(context.Body)
 		      
 		      me.Flush
 		      Me.Disconnect

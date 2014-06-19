@@ -121,8 +121,8 @@ Inherits ServerSocket
 		  
 		  System.DebugLog "No handler matched the Request with url " + pRequest.URL
 		  
-		  pRequest.StatusCode = 404
-		  pRequest.Buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.StatusCode)
+		  pRequest.Status = 404
+		  pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)
 		  
 		End Sub
 	#tag EndMethod

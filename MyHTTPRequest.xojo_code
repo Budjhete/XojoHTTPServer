@@ -26,8 +26,8 @@ Protected Class MyHTTPRequest
 		  Me.Method = MyHTTPRequest.GET
 		  
 		  // Default Output
-		  Me.StatusCode = MyHTTPServerModule.kStatusNotFound
-		  Me.Buffer = MyHTTPServerModule.HTTPErrorHTML(Me.statuscode)
+		  Me.Status = MyHTTPServerModule.kStatusNotFound
+		  Me.Body = MyHTTPServerModule.HTTPErrorHTML(Me.Status)
 		  
 		  System.DebugLog "HTTPServRequestContext: Constuct Request Context"
 		End Sub
@@ -114,9 +114,9 @@ Protected Class MyHTTPRequest
 		Sub Print(Text As String)
 		  If Me.unused Then
 		    Me.unused = False
-		    Me.buffer = ""
+		    Me.Body = ""
 		  End
-		  Me.buffer = Me.buffer + text
+		  Me.Body = Me.Body + text
 		End Sub
 	#tag EndMethod
 
@@ -169,7 +169,7 @@ Protected Class MyHTTPRequest
 
 
 	#tag Property, Flags = &h0
-		Buffer As String
+		Body As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -197,7 +197,7 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		StatusCode As Integer
+		Status As Integer
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
@@ -252,6 +252,11 @@ Protected Class MyHTTPRequest
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Method"
+			Group="Behavior"
+			Type="String"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
