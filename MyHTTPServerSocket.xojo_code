@@ -3,10 +3,7 @@ Protected Class MyHTTPServerSocket
 Inherits ServerSocket
 	#tag Event
 		Function AddSocket() As TCPSocket
-		  Dim s As MyHTTPServerClientHandler
-		  s = New MyHTTPServerClientHandler
-		  s.parent = Self
-		  Return s
+		  Return New MyHTTPServer(Self)
 		End Function
 	#tag EndEvent
 
@@ -16,19 +13,6 @@ Inherits ServerSocket
 		End Sub
 	#tag EndEvent
 
-
-	#tag Method, Flags = &h0
-		Sub AddURL(URL As String, File As FolderItem)
-		  Dim i As Integer
-		  urls.value(url) = file
-		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Sub AddURL(URL As String, Handler As MyHTTPServerRequestHandler)
-		  urls.value(url) = handler
-		End Sub
-	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Close()
@@ -89,170 +73,85 @@ Inherits ServerSocket
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub ForwardContext(URL As String, Context As MyHTTPServerRequestContext)
-		  Dim v As variant
-		  Dim handler As MyHTTPServerRequestHandler
-		  Dim t As TextInputStream
-		  Dim i As Integer
-		  Dim baseurl As String
-		  Dim file As String = ""
+		Sub HandleRequest(pRequest As MyHTTPRequest)
+		  // First Request handler
+		  Dim url As String = pRequest.URL
 		  
-		  
-		  ' If no match then go hunting
-		  If urls.haskey(url) = False Then
+		  If URLs.HasKey(url) Then
 		    
-		    ' Check for index file
-		    If Right(url, 1) = "/" Then
-		      For i = 0 To ubound(indexfiles)
-		        If urls.haskey(url + indexfiles(i)) Then
-		          url = url + indexfiles(i)
-		          Exit For
-		        End If
-		      Next
-		    End If
+		    Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(url)
 		    
-		    If urls.haskey(url) = False Then ' Check for base directory
-		      baseurl = url
-		      While InStr(0, baseurl, "/") > 0
-		        baseurl = url.Left(MyHTTPServerModule.InStrReverse(Len(baseurl)-1, baseurl, "/"))
-		        If urls.haskey(baseurl) Then
-		          file = url.Right(Len(url)-Len(baseurl))
-		          url = baseurl
-		          
-		          Exit While
-		        End If
-		      Wend
-		    End If
-		  End If
-		  
-		  If urls.haskey(url) Then
-		    v = urls.value(url)
-		    #pragma BreakOnExceptions Off
-		    If v IsA folderitem Then
-		      Dim f As FolderItem
-		      f = v
+		    pRequestHandler.HandleRequest(pRequest)
+		    
+		  Else
+		    
+		    For Each key As Variant In URLs.Keys
 		      
-		      If f.Exists Then
+		      // Try to match RegEx key
+		      If key IsA RegEx Then
 		        
-		        If file <> "" Then
-		          Dim tmpf As FolderItem
+		        Dim match As RegExMatch = RegEx(key).Search(URL)
+		        
+		        If match <> Nil Then
 		          
-		          try
-		            tmpf = New FolderItem(f.URLPath+MyHTTPServerModule.URLEncode(file), FolderItem.PathTypeURL)
-		            
-		          Catch err As UnsupportedFormatException
-		            context.statuscode = MyHTTPServerModule.kStatusNotFound
-		            context.buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
-		            
-		            Exit Sub
-		          End Try
+		          Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(key)
 		          
-		          
-		          If tmpf.Exists Then
-		            f = New FolderItem(tmpf)
-		            tmpf = Nil
-		          Else
-		            tmpf = Nil
-		            
-		            // File Not Found
-		            context.statuscode = MyHTTPServerModule.kStatusNotFound
-		            context.buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
-		            
-		            Exit Sub
-		          End If
+		          pRequestHandler.HandleRequest(pRequest)
 		          
 		        End If
-		        
-		        
-		        If f.Directory Then
-		          ' Check for index files in directory
-		          For i = 0 To ubound(indexfiles)
-		            If f.Child(indexfiles(i)).Exists Then
-		              f = f.Child(indexfiles(i))
-		              Exit For
-		            End If
-		          Next
-		          
-		          ' No file found, showing index
-		          If f.Directory Then
-		            Context.Print(HTTPDirectoryHTML(url+file, f))
-		            
-		            Context.statuscode = MyHTTPServerModule.kstatusok
-		          End If
-		        End If
-		        
-		        
-		        If f.Directory = False Then
-		          Context.Headers.Value(MyHTTPServerModule.kHeaderContentType) = MyHTTPServerModule.HTTPMimeString(f.FileExtension)
-		          
-		          Dim ReadStream As BinaryStream = BinaryStream.Open(f, False)
-		          If ReadStream.Length > 0 Then
-		            Context.Headers.Value(MyHTTPServerModule.kHeaderDate) = f.ModificationDate.HTTPDate
-		            
-		            Context.Buffer = ReadStream.Read(ReadStream.Length)
-		            ReadStream.Close
-		            ReadStream = Nil
-		            
-		            Context.statuscode = MyHTTPServerModule.kstatusok
-		          Else
-		            Context.statuscode = MyHTTPServerModule.kStatusInternalServerError
-		            context.buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
-		            
-		          End If
-		        End If
-		        
-		        
-		        f = Nil
-		      Else
-		        f = Nil
-		        
-		        // File does not exist, Send a 404 Error
-		        context.statuscode = MyHTTPServerModule.kStatusNotFound
-		        context.buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
-		        
 		        
 		      End If
 		      
-		    Elseif v IsA MyHTTPServerRequestHandler Then
-		      handler = MyHTTPServerRequestHandler(v)
-		      handler.handlerequest(context)
-		    End If
-		    #pragma BreakOnExceptions Default
+		    Next
+		    
 		  End If
 		  
-		Exception err
-		  context.statuscode = MyHTTPServerModule.kstatusinternalservererror
-		  context.buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
+		  pRequest.StatusCode = 404
+		  pRequest.Buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.StatusCode)
 		  
-		  'Raise err
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Listen()
-		  LogMsg(LogType1_Notice, "HTTPServSock: Start Listening")
+		  System.Log(System.LogLevelInformation, "Start listening on port " + Str(Me.Port))
 		  Super.Listen
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub RemoveURL(URL As String)
-		  If urls.haskey(url) Then
-		    urls.remove(url)
-		  End
+		Sub Register(regex As RegEx, pHandler As MyHTTPRequestHandler)
+		  // Register a handler called whenever the URL match the regex
+		  URLs.Value(regex) = pHandler
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub Register(URL As String, pHandler As MyHTTPRequestHandler)
+		  // Register a handler called whenever the request URL match the URL
+		  URLs.value(URL) = pHandler
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Function SocketCount() As Integer
-		  Return Self.ActiveConnections.Ubound+1
+		  Return Self.ActiveConnections.Ubound + 1
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub StopListening()
-		  LogMsg(LogType1_Notice, "HTTPServSock: Stop Listening")
+		  System.Log(System.LogLevelInformation, "HTTPServerSocket: Stop Listening...")
+		  
 		  Super.StopListening
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub Unregister(URL As String)
+		  If URLs.HasKey(url) Then
+		    URLs.Remove(URL)
+		  End
 		End Sub
 	#tag EndMethod
 

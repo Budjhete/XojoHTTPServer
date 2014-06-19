@@ -3353,7 +3353,7 @@ Protected Module MyHTTPServerModule
 	#tag Constant, Name = kVersion, Type = String, Dynamic = False, Default = \"HTTP/1.1", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = VersionLongString, Type = String, Dynamic = False, Default = \"REALbasic HTTP Server 0.3", Scope = Protected
+	#tag Constant, Name = VersionLongString, Type = String, Dynamic = False, Default = \"Kanjo HTTP Server 0.1", Scope = Protected
 	#tag EndConstant
 
 	#tag Constant, Name = VersionShortString, Type = String, Dynamic = False, Default = \"0.1", Scope = Protected
