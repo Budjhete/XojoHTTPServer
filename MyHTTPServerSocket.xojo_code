@@ -9,7 +9,7 @@ Inherits ServerSocket
 
 	#tag Event
 		Sub Error(ErrorCode as Integer)
-		  LogMsg(LogType2_Error, "HTTPServSock: Error Num "+str(ErrorCode))
+		  System.Log(System.LogLevelError, "HTTPServSock: Error Num " + str(ErrorCode))
 		End Sub
 	#tag EndEvent
 
@@ -34,7 +34,7 @@ Inherits ServerSocket
 		      If tmp = TCPSocketList.Ubound Then
 		        CloseTry = CloseTry + 1
 		        If CloseTry > 3 Then
-		          LogMsg(LogType2_Error, "HTTPServSock: Error trying to close server socket, "+Str(TCPSocketList.Ubound+1)+" sockets left")
+		          System.Log(System.LogLevelError, "HTTPServSock: Error trying to close server socket, "+Str(TCPSocketList.Ubound+1)+" sockets left")
 		          Exit While
 		        End If
 		      Else
@@ -42,7 +42,7 @@ Inherits ServerSocket
 		      End If
 		    Wend
 		    
-		    LogMsg(LogType1_Notice, "HTTPServSock: Server Stopped ("+Str(TCPSocketList.Ubound + 1)+")")
+		    System.Log(System.LogLevelNotice, "HTTPServSock: Server Stopped ("+Str(TCPSocketList.Ubound + 1)+")")
 		    
 		  End If
 		End Sub
@@ -50,7 +50,7 @@ Inherits ServerSocket
 
 	#tag Method, Flags = &h0
 		Sub Constructor()
-		  LogMsg(LogType0_Debug, "HTTPServSock: Constuct")
+		  System.DebugLog "HTTPServSock: Constuct"
 		  
 		  Me.port = MyHTTPServerModule.kDefaultPort
 		  Me.urls = New dictionary
@@ -59,29 +59,40 @@ Inherits ServerSocket
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub Constructor(Port As Integer)
-		  Me.constructor
-		  Me.port = port
+		Sub Constructor(pPort As Integer)
+		  Me.Constructor
+		  
+		  Me.Port = pPort
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
 		Protected Sub Destructor()
 		  Self.Close
-		  LogMsg(LogType0_Debug, "HTTPServSock: Destruct")
+		  
+		  System.DebugLog "HTTPServSock: Destruct"
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub HandleRequest(pRequest As MyHTTPRequest)
 		  // First Request handler
+		  //
+		  // Request are handled here before being handled by specific code
+		  //
+		  
 		  Dim url As String = pRequest.URL
 		  
 		  If URLs.HasKey(url) Then
 		    
 		    Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(url)
 		    
-		    pRequestHandler.HandleRequest(pRequest)
+		    Dim pRegex As New RegEx
+		    pRegex.SearchPattern = ".+"
+		    
+		    pRequestHandler.HandleRequest(pRequest, pRegex.Search(url))
+		    
+		    Return
 		    
 		  Else
 		    
@@ -96,7 +107,9 @@ Inherits ServerSocket
 		          
 		          Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(key)
 		          
-		          pRequestHandler.HandleRequest(pRequest)
+		          pRequestHandler.HandleRequest(pRequest, match)
+		          
+		          Return
 		          
 		        End If
 		        
@@ -105,6 +118,8 @@ Inherits ServerSocket
 		    Next
 		    
 		  End If
+		  
+		  System.DebugLog "No handler matched the Request with url " + pRequest.URL
 		  
 		  pRequest.StatusCode = 404
 		  pRequest.Buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.StatusCode)
@@ -120,16 +135,20 @@ Inherits ServerSocket
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub Register(regex As RegEx, pHandler As MyHTTPRequestHandler)
+		Sub Register(pRegex As RegEx, pHandler As MyHTTPRequestHandler)
 		  // Register a handler called whenever the URL match the regex
-		  URLs.Value(regex) = pHandler
+		  URLs.Value(pRegex) = pHandler
+		  
+		  System.Log(System.LogLevelNotice, "Registered a handler for regex pattern " + pRegex.SearchPattern)
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub Register(URL As String, pHandler As MyHTTPRequestHandler)
+		Sub Register(pURL As String, pHandler As MyHTTPRequestHandler)
 		  // Register a handler called whenever the request URL match the URL
-		  URLs.value(URL) = pHandler
+		  URLs.value(pURL) = pHandler
+		  
+		  System.Log(System.LogLevelNotice, "Registered a handler for URL " + pURL)
 		End Sub
 	#tag EndMethod
 
@@ -141,17 +160,9 @@ Inherits ServerSocket
 
 	#tag Method, Flags = &h0
 		Sub StopListening()
-		  System.Log(System.LogLevelInformation, "HTTPServerSocket: Stop Listening...")
+		  System.Log(System.LogLevelInformation, "Stop Listening on port " + Str(Me.Port) + "...")
 		  
 		  Super.StopListening
-		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Sub Unregister(URL As String)
-		  If URLs.HasKey(url) Then
-		    URLs.Remove(URL)
-		  End
 		End Sub
 	#tag EndMethod
 

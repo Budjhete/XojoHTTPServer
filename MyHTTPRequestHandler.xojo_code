@@ -1,7 +1,7 @@
 #tag Interface
 Protected Interface MyHTTPRequestHandler
 	#tag Method, Flags = &h0
-		Sub HandleRequest(pRequest As MyHTTPRequest)
+		Sub HandleRequest(pRequest As MyHTTPRequest, pMatch As RegExMatch)
 		  
 		End Sub
 	#tag EndMethod

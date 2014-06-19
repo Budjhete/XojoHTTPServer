@@ -16,7 +16,7 @@ Inherits TCPSocket
 		  
 		  headerslength = InStrB(la, MyHTTPServerModule.crlf + MyHTTPServerModule.crlf) - 1 // length of the headers
 		  
-		  LogMsg(LogType1_Notice, "HTTPServClientHandle("+Str(uid)+"): Data Available ["+Str(LenB(la))+" totallen] "+Str(headerslength)+" headerlen")
+		  System.Log(System.LogLevelNotice, "HTTPServer #" + Str(uid) + ": Data Available ["+Str(LenB(la))+" totallen] "+Str(headerslength)+" headerlen")
 		  If headerslength > 0 Then
 		    // We have a complete header. But we're not done yet. Some HTTP methods send entity
 		    // data, such as POST and PUT, which need to be read out as well, but may not be complete
@@ -49,12 +49,12 @@ Inherits TCPSocket
 		        data = Me.read(requestlength, encodings.ascii)
 		        entity = MidB(data,headerslength + 1 + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf),entitylength)
 		        
-		        LogMsg(LogType0_Debug, "HTTPServClientHandle("+Str(uid)+"): Recived Request, "+Str(requestlength)+" len")
+		        System.DebugLog("HTTPServer #("+Str(uid)+"): Recived Request, "+Str(requestlength)+" len")
 		      Else
 		        // There is more data to be received. We take no further action in this event, and start
 		        // over the next event, which should contain more data.
 		        
-		        LogMsg(LogType0_Debug, "HTTPServClientHandle("+Str(uid)+"): Missing Data Resetting goto START")
+		        System.DebugLog("HTTPServer #" + Str(uid) + ": Missing Data Resetting goto START")
 		      End
 		    Else
 		      // The request does not contain a Content-Length header, so it must be complete.
@@ -64,7 +64,7 @@ Inherits TCPSocket
 		      entitylength = 0
 		      entity = ""
 		      
-		      LogMsg(LogType0_Debug, "HTTPServClientHandle("+Str(uid)+"): Recived Request, No Length")
+		      System.DebugLog("HTTPServer #" + Str(uid) + ": Recived Request, No Length")
 		    End
 		    
 		    // Rather than duplicate code, we handle the rest outside of the entity loop. We need
@@ -75,17 +75,21 @@ Inherits TCPSocket
 		    Dim i As Integer
 		    
 		    If data <> "" Then
+		      
 		      If searcher = Nil Then
-		        searcher = New regex
+		        searcher = New RegEx
 		      End
-		      searcher.searchpattern = MyHTTPServerModule.kregexrequestline
-		      m = searcher.search(headers)
+		      
+		      searcher.SearchPattern = MyHTTPServerModule.kregexrequestline
+		      m = searcher.Search(headers)
 		      
 		      If m <> Nil Then
-		        method = m.subexpressionstring(1)
-		        url = m.subexpressionstring(2)
-		        query = m.subexpressionstring(4)
-		        version = m.subexpressionstring(5)
+		        
+		        method = m.SubExpressionString(1)
+		        url = m.SubExpressionString(2)
+		        query = m.SubExpressionString(4)
+		        version = m.SubExpressionString(5)
+		        
 		        If method = MyHTTPServerModule.kmethodpost Then
 		          // In the case of a post request, the query is stored in the entity, so we modify accordingly
 		          If query <> "" Then
@@ -96,17 +100,21 @@ Inherits TCPSocket
 		        End
 		        
 		        // We send the headers,entity & query to the context, before sending it to the handler.
-		        context.url = URLDecode(url)
-		        context.loadrequestparameters(headers)
-		        context.loadvariables query
-		        context.entity = entity
+		        context.Method = method
+		        context.URL = URLDecode(url)
+		        context.LoadRequestParameters(headers)
+		        context.LoadVariables query
+		        context.Entity = entity
 		        
 		        // We ask the server to send our context to whatever is handling this url
-		        LogMsg(LogType1_Notice, "HTTPServClientHandle("+Str(uid)+"): Processing URL "+URLDecode(url))
+		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(uid) + ": Processing URL " + URLDecode(url))
 		        parent.HandleRequest(context)
+		        
 		      Else
-		        context.statuscode = MyHTTPServerModule.kStatusBadRequest
-		        Context.Buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
+		        
+		        // Bad request
+		        context.StatusCode = MyHTTPServerModule.kStatusBadRequest
+		        context.Buffer = MyHTTPServerModule.HTTPErrorHTML(context.statuscode)
 		        
 		      End If
 		      
@@ -141,7 +149,7 @@ Inherits TCPSocket
 		    data = ""
 		    la = Me.lookahead(encodings.ascii)
 		    If LenB(la) > 0 Then
-		      LogMsg(LogType0_Debug, "HTTPServClientHandle("+Str(uid)+"): More DataAvaible - Start Over "+Str(LenB(la)))
+		      System.DebugLog "HTTPServer #" + Str(uid) + ": More DataAvaible - Start Over " + Str(LenB(la))
 		      GoTo restartPoint
 		    End If
 		  End
@@ -163,14 +171,14 @@ Inherits TCPSocket
 		  uid = Lastuid + 1
 		  Lastuid = uid
 		  
-		  LogMsg(LogType0_Debug, "HTTPServClientHandle("+str(uid)+"): Constuct")
+		  System.DebugLog("HTTPServClientHandle("+str(uid)+"): Constuct")
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Destructor()
 		  Parent = Nil
-		  LogMsg(LogType0_Debug, "HTTPServClientHandle("+str(uid)+"): Destruct")
+		  System.DebugLog "HTTPServClientHandle("+str(uid)+"): Destruct"
 		End Sub
 	#tag EndMethod
 

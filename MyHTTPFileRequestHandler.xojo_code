@@ -2,13 +2,60 @@
 Protected Class MyHTTPFileRequestHandler
 Implements MyHTTPRequestHandler
 	#tag Method, Flags = &h0
-		Sub HandleRequest(pRequest As MyHTTPRequest)
-		  // Handles a File request
+		Sub Constructor(pRoot As FolderItem)
 		  
-		  pRequest.statuscode = MyHTTPServerModule.kStatusNotFound
-		  pRequest.buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.statuscode)
 		End Sub
 	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub HandleRequest(pRequest As MyHTTPRequest, pMatch As RegExMatch)
+		  // Handles a File request
+		  
+		  Dim pFolderItem As FolderItem = mRoot
+		  
+		  Dim pPieces() As String = Split("/", pRequest.URL)
+		  
+		  For Each pPiece As String In pPieces
+		    
+		    pFolderItem = pFolderItem.Child(pPiece)
+		    
+		  Next
+		  
+		  If pFolderItem.Exists Then
+		    
+		    If pFolderItem.Directory Then
+		      
+		      // List directory content
+		      
+		      pRequest.Buffer = "<h2>" + pFolderItem.DisplayName + "</h2>"
+		      
+		      pRequest.Buffer = pRequest.Buffer + "<ul>"
+		      
+		      For pIndex As Integer = 0 To pFolderItem.Count - 1
+		        pRequest.Buffer = pRequest.Buffer + "<li><a href='" + pFolderItem.Item(pIndex).Name + "'" + pFolderItem.Item(pIndex).DisplayName + "</a></li>"
+		      Next
+		      
+		      pRequest.Buffer = pRequest.Buffer + "</ul>"
+		      
+		    Else
+		      
+		      // Output file content
+		      
+		    End If
+		    
+		    pRequest.StatusCode = 404
+		    pRequest.Buffer = MyHTTPServerModule.HTTPErrorHTML(pRequest.StatusCode)
+		    
+		  End If
+		  
+		  
+		End Sub
+	#tag EndMethod
+
+
+	#tag Property, Flags = &h21
+		Private mRoot As FolderItem
+	#tag EndProperty
 
 
 	#tag ViewBehavior

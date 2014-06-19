@@ -7,13 +7,13 @@ Protected Class MyHTTPServerSession
 		  uid = Lastuid + 1
 		  Lastuid = uid
 		  
-		  LogMsg(LogType0_Debug, "HTTPServSession("+str(uid)+"): Construct")
+		  System.DebugLog "HTTPServSession(" + str(uid) + "): Construct"
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Destructor()
-		  LogMsg(LogType0_Debug, "HTTPServSession("+str(uid)+"): Destruct")
+		  System.DebugLog "HTTPServSession(" + Str(uid) + "): Destruct"
 		End Sub
 	#tag EndMethod
 

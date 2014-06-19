@@ -4,10 +4,10 @@ Protected Class MyHTTPRequest
 		Sub Constructor()
 		  Dim d As New Date
 		  
-		  Me.headers = New dictionary
-		  Me.requestheaders = New dictionary
-		  Me.cookies = New dictionary
-		  Me.variables = New dictionary
+		  Me.Headers = New Dictionary
+		  Me.RequestHeaders = New Dictionary
+		  Me.Cookies = New Dictionary
+		  Me.Variables = New Dictionary
 		  
 		  // Header Date
 		  Me.Headers.Value(MyHTTPServerModule.kHeaderDate) = d.HTTPDate
@@ -22,27 +22,26 @@ Protected Class MyHTTPRequest
 		  // Default Host
 		  Me.Headers.Value(MyHTTPServerModule.kHeaderHost) = "127.0.0.1"
 		  
+		  // Default Method
+		  Me.Method = MyHTTPRequest.GET
+		  
 		  // Default Output
-		  Me.statuscode = MyHTTPServerModule.kStatusNotFound
+		  Me.StatusCode = MyHTTPServerModule.kStatusNotFound
 		  Me.Buffer = MyHTTPServerModule.HTTPErrorHTML(Me.statuscode)
 		  
-		  LogMsg(LogType0_Debug, "HTTPServRequestContext: Constuct Request Context")
+		  System.DebugLog "HTTPServRequestContext: Constuct Request Context"
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Function Cookie(Name As String) As String
-		  If Me.cookies.haskey(name) Then
-		    Return Me.cookies.value(name)
-		  Else
-		    Return ""
-		  End
+		  Return Me.Cookies.Lookup(name, "")
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Destructor()
-		  LogMsg(LogType0_Debug, "HTTPServRequestContext: Destruct Request Context")
+		  System.DebugLog "HTTPServRequestContext: Destruct Request Context"
 		End Sub
 	#tag EndMethod
 
@@ -136,21 +135,25 @@ Protected Class MyHTTPRequest
 
 	#tag Method, Flags = &h0
 		Sub SetCookie(Name As String, Value As String = "", Expire As Date = nil, Path As String = "/", Domain As String = ".", Secure As Boolean = False)
-		  Dim s As String
-		  s = name + "=" + value
+		  Dim s As String = name + "=" + value
+		  
 		  If domain <> "." Then
 		    s = s + "; domain=" + domain
 		  End
+		  
 		  If path <> "/" Then
 		    s = s + "; path=" + path
 		  End
+		  
 		  If expire <> Nil Then
 		    s = s + "; expire=" + expire.cookiedate
 		  End
+		  
 		  If secure Then
 		    s = s + "; secure"
 		  End
-		  Me.headers.value("Set-Cookie") = s
+		  
+		  Me.Headers.Value("Set-Cookie") = s
 		End Sub
 	#tag EndMethod
 
@@ -169,8 +172,8 @@ Protected Class MyHTTPRequest
 		Buffer As String
 	#tag EndProperty
 
-	#tag Property, Flags = &h21
-		Private Cookies As Dictionary
+	#tag Property, Flags = &h0
+		Cookies As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -179,6 +182,10 @@ Protected Class MyHTTPRequest
 
 	#tag Property, Flags = &h0
 		Headers As Dictionary
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Method As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
@@ -204,6 +211,19 @@ Protected Class MyHTTPRequest
 	#tag Property, Flags = &h21
 		Private Variables As Dictionary
 	#tag EndProperty
+
+
+	#tag Constant, Name = DELETE, Type = String, Dynamic = False, Default = \"DELETE", Scope = Public
+	#tag EndConstant
+
+	#tag Constant, Name = GET, Type = String, Dynamic = False, Default = \"GET", Scope = Public
+	#tag EndConstant
+
+	#tag Constant, Name = POST, Type = String, Dynamic = False, Default = \"POST", Scope = Public
+	#tag EndConstant
+
+	#tag Constant, Name = PUT, Type = String, Dynamic = False, Default = \"PUT", Scope = Public
+	#tag EndConstant
 
 
 	#tag ViewBehavior
@@ -257,6 +277,12 @@ Protected Class MyHTTPRequest
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="URL"
+			Group="Behavior"
+			Type="String"
+			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class
