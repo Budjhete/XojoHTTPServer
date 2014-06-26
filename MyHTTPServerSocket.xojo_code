@@ -84,17 +84,18 @@ Inherits ServerSocket
 		  // handler that could be found in URLs.
 		  
 		  Dim pURL As String = pRequest.URL
+		  Dim pRequestHandler As MyHTTPRequestHandler
+		  Dim pRegexMatch As RegExMatch
 		  
+		  // Find a handler
 		  If URLs.HasKey(pURL) Then
 		    
-		    Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(pURL)
-		    
-		    Dim pRegex As New RegEx
+		    pRequestHandler = URLs.Value(pURL)
+		    Dim pRegex As New Regex
 		    pRegex.SearchPattern = ".+"
 		    
-		    pRequestHandler.HandleRequest(pRequest, pRegex.Search(pURL))
-		    
-		    Return
+		    // match the whole URL
+		    pRegexMatch = pRegex.Search(pURL)
 		    
 		  Else
 		    
@@ -103,15 +104,13 @@ Inherits ServerSocket
 		      // Try to match RegEx key
 		      If pKey IsA RegEx Then
 		        
-		        Dim pMatch As RegExMatch = RegEx(pKey).Search(pURL)
+		        pRegexMatch = RegEx(pKey).Search(pURL)
 		        
-		        If pMatch <> Nil Then
+		        If pRegexMatch <> Nil Then
 		          
-		          Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(pKey)
+		          pRequestHandler = URLs.Value(pKey)
 		          
-		          pRequestHandler.HandleRequest(pRequest, pMatch)
-		          
-		          Return
+		          Exit // skip the loop
 		          
 		        End If
 		        
@@ -121,10 +120,62 @@ Inherits ServerSocket
 		    
 		  End If
 		  
-		  System.DebugLog "No handler matched the Request with url " + pRequest.URL
+		  // No handler found
+		  If pRequestHandler Is Nil Then
+		    
+		    System.DebugLog "No handler matched the Request with url " + pRequest.URL
+		    
+		    // Not Implemented
+		    pRequest.Status = 501
+		    pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)
+		    
+		  End If
 		  
-		  pRequest.Status = 404
-		  pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)
+		  // Authentication
+		  If pRequestHandler IsA MyHTTPAuthRequestHandler Then
+		    
+		    If pRequest.RequestHeaders.HasKey("Authorization") Then
+		      
+		      Dim pRegex As New RegEx
+		      pRegex.SearchPattern = "Basic ([\w=]+)"
+		      
+		      Dim pSecret As String = DecodeBase64(pRegex.Search(pRequest.RequestHeaders.Value("Authorization").StringValue).SubExpressionString(1))
+		      
+		      Dim pCredentials() As String = Split(pSecret, ":")
+		      
+		      If MyHTTPAuthRequestHandler(pRequestHandler).Authenticate(pCredentials(0), pCredentials(1)) Then
+		        
+		        System.Log(System.LogLevelNotice, "Authentication successful for user " + pCredentials(0) + " using a password.")
+		        
+		      Else
+		        
+		        // Authentication failure
+		        pRequest.Headers.Value("WWW-Authenticate") = "Basic realm=""" + MyHTTPAuthRequestHandler(pRequestHandler).Realm + """"
+		        pRequest.Status = 401
+		        
+		        System.Log(System.LogLevelWarning, "Authentication failed for user " + pCredentials(0) + " using a password.")
+		        
+		        Return
+		        
+		      End If
+		      
+		    Else
+		      
+		      System.DebugLog "Authenticating a user using a password..."
+		      
+		      // Authentication
+		      pRequest.Headers.Value("WWW-Authenticate") = "Basic realm=""" + MyHTTPAuthRequestHandler(pRequestHandler).Realm + """"
+		      pRequest.Status = 401
+		      
+		      Return
+		      
+		    End If
+		    
+		  End If
+		  
+		  // Handle the Request
+		  pRequestHandler.HandleRequest(pRequest, pRegexMatch)
+		  
 		  
 		End Sub
 	#tag EndMethod
