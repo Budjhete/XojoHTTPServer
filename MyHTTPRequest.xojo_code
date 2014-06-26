@@ -1,8 +1,11 @@
 #tag Class
 Protected Class MyHTTPRequest
 	#tag Method, Flags = &h0
-		Sub Constructor()
+		Sub Constructor(pHTTPServer As MyHTTPServer)
 		  Dim pNow As New Date
+		  
+		  // Server that emmited the Request
+		  Me.Parent = pHTTPServer
 		  
 		  Me.Headers = New Dictionary
 		  Me.RequestHeaders = New Dictionary
@@ -37,11 +40,13 @@ Protected Class MyHTTPRequest
 
 	#tag Method, Flags = &h0
 		Sub LoadRequestParameters(FromString As String)
+		  // Read crlf separated headers and load headers, cookies and session
+		  
 		  Dim lines() As String
 		  Dim i As Integer
 		  Dim key,value As String
 		  
-		  // load request headers
+		  // Process headers
 		  Me.RequestHeaders = New Dictionary
 		  lines = fromstring.Split(MyHTTPServerModule.crlf)
 		  lines.remove 0
@@ -52,7 +57,7 @@ Protected Class MyHTTPRequest
 		    RequestHeaders.value(key) = value
 		  Next
 		  
-		  // process request headers
+		  // Process cookies
 		  Me.Cookies = New Dictionary
 		  lines = Me.Headers.Lookup("Cookie", "").Split("; ")
 		  For i = 0 To ubound(lines)
@@ -62,17 +67,34 @@ Protected Class MyHTTPRequest
 		    Me.Cookies.Value(key) = value
 		  Next
 		  
+		  // Get the session
 		  Dim pSessionID As Integer = Val(Me.Cookies.Lookup("session-id", ""))
-		  Me.Session = MyHTTPServerModule.FindSession(pSessionID)
 		  
-		  If Me.Session = Nil Then
+		  // The server socket stores sessions in a Dictionary
+		  If Not Me.Parent.Parent.Sessions.HasKey(pSessionID) Then
 		    
-		    pSessionID = MyHTTPServerModule.createsession.Identifier
-		    Me.SetCookie("session-id", Str(pSessionID))
+		    System.DebugLog "Creating a new session with a random id..."
+		    
+		    Dim pRandom As New Random
+		    
+		    // Generates an unique and random session id
+		    Do
+		      pSessionID = pRandom.Number
+		    Loop Until Not Me.Parent.Parent.Sessions.HasKey(pSessionID)
+		    
+		    // Append the session to the Dictionary
+		    Me.Parent.Parent.Sessions.Value(pSessionID) = New Dictionary
 		    
 		    System.DebugLog "Created a new session with id " + Str(pSessionID)
 		    
+		    // Set the session id in the cookies
+		    Me.SetCookie("session-id", Str(pSessionID))
+		    
 		  End If
+		  
+		  // Fetch the session
+		  Me.Session = Me.Parent.Parent.Sessions.Value(pSessionID)
+		  
 		End Sub
 	#tag EndMethod
 
@@ -143,11 +165,15 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
+		Parent As MyHTTPServer
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
 		RequestHeaders As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		Session As MyHTTPServerSession
+		Session As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -178,10 +204,9 @@ Protected Class MyHTTPRequest
 
 	#tag ViewBehavior
 		#tag ViewProperty
-			Name="Buffer"
+			Name="Body"
 			Group="Behavior"
 			Type="String"
-			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Entity"
@@ -206,7 +231,9 @@ Protected Class MyHTTPRequest
 		#tag ViewProperty
 			Name="Method"
 			Group="Behavior"
+			InitialValue="GET"
 			Type="String"
+			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
@@ -215,9 +242,9 @@ Protected Class MyHTTPRequest
 			Type="String"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="StatusCode"
+			Name="Status"
 			Group="Behavior"
-			InitialValue="0"
+			InitialValue="200"
 			Type="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty

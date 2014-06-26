@@ -7,16 +7,16 @@ Inherits TCPSocket
 		  
 		  Dim la,data,headers,entity As String
 		  Dim lalength,headerslength,entitylength,requestlength As Integer
-		  'Dim context As MyHTTPServerRequestContext
-		  Dim m As regexmatch
+		  Dim m As RegExMatch
 		  
 		  restartPoint:
 		  
-		  la = Me.lookahead(encodings.ascii)
+		  la = Me.Lookahead(Encodings.ascii)
 		  
 		  headerslength = InStrB(la, MyHTTPServerModule.crlf + MyHTTPServerModule.crlf) - 1 // length of the headers
 		  
-		  System.Log(System.LogLevelNotice, "HTTPServer #" + Str(uid) + ": Data Available ["+Str(LenB(la))+" totallen] "+Str(headerslength)+" headerlen")
+		  System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": " + Str(LenB(la)) + "B of total length of data available with " + Str(headerslength) + "B of headers length.")
+		  
 		  If headerslength > 0 Then
 		    // We have a complete header. But we're not done yet. Some HTTP methods send entity
 		    // data, such as POST and PUT, which need to be read out as well, but may not be complete
@@ -25,8 +25,8 @@ Inherits TCPSocket
 		    // everything else is a new request.
 		    
 		    headers = LeftB(la, headerslength) // the headers
-		    context = New MyHTTPRequest
-		    context.loadrequestparameters(headers)
+		    Me.Context = New MyHTTPRequest(Me)
+		    Me.Context.LoadRequestParameters(headers)
 		    
 		    // Check for required headers
 		    'If MyHTTPServerModule.kVersion = "HTTP/1.1" Then
@@ -35,7 +35,7 @@ Inherits TCPSocket
 		    'End If
 		    'End If
 		    
-		    If context.Headers.HasKey("Content-Length") Then
+		    If Me.Context.Headers.HasKey("Content-Length") Then
 		      // Now we know there is entity data in this request.
 		      
 		      entitylength = Val(context.Headers.Lookup("Content-Length", ""))
@@ -49,12 +49,12 @@ Inherits TCPSocket
 		        data = Me.read(requestlength, encodings.ascii)
 		        entity = MidB(data,headerslength + 1 + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf),entitylength)
 		        
-		        System.DebugLog("HTTPServer #("+Str(uid)+"): Recived Request, "+Str(requestlength)+" len")
+		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Recived Request, "+Str(requestlength)+" len")
 		      Else
 		        // There is more data to be received. We take no further action in this event, and start
 		        // over the next event, which should contain more data.
 		        
-		        System.DebugLog("HTTPServer #" + Str(uid) + ": Missing Data Resetting goto START")
+		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Missing Data Resetting goto START")
 		      End
 		    Else
 		      // The request does not contain a Content-Length header, so it must be complete.
@@ -64,7 +64,7 @@ Inherits TCPSocket
 		      entitylength = 0
 		      entity = ""
 		      
-		      System.DebugLog("HTTPServer #" + Str(uid) + ": Recived Request, No Length")
+		      System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Recived Request, No Length")
 		    End
 		    
 		    // Rather than duplicate code, we handle the rest outside of the entity loop. We need
@@ -100,57 +100,66 @@ Inherits TCPSocket
 		        End
 		        
 		        // We send the headers,entity & query to the context, before sending it to the handler.
-		        context.Method = method
-		        context.URL = URLDecode(url)
-		        context.LoadRequestParameters(headers)
-		        context.LoadVariables query
-		        context.Entity = entity
+		        Me.Context.Method = method
+		        Me.Context.URL = URLDecode(url)
+		        Me.Context.LoadRequestParameters(headers)
+		        Me.Context.LoadVariables query
+		        Me.Context.Entity = entity
 		        
 		        // We ask the server to send our context to whatever is handling this url
-		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(uid) + ": Processing URL " + URLDecode(url))
-		        parent.HandleRequest(context)
+		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + URLDecode(url))
+		        Me.Parent.HandleRequest(Me.Context)
 		        
 		      Else
 		        
+		        System.Log(System.LogLevelWarning, "HTTPServer #" + Str(Me.Identifier) + ": Processing a Bad Request for URL " + URLDecode(url))
+		        
 		        // Bad request
-		        context.Status = MyHTTPServerModule.kStatusBadRequest
-		        context.Body = MyHTTPServerModule.HTTPErrorHTML(context.Status)
+		        Me.Context.Status = MyHTTPServerModule.kStatusBadRequest
+		        Me.Context.Body = MyHTTPServerModule.HTTPErrorHTML(Me.Context.Status)
 		        
 		      End If
 		      
+		      System.DebugLog "HTTPServer #" + Str(Me.Identifier) + ": Responding Request with URL " + URLDecode(url)
+		      
 		      // HTTP requests rely on the Content-Length header. Rather than require the user to set
 		      // the header, we simply add it based on the buffer size.
-		      context.headers.value(MyHTTPServerModule.kheadercontentlength) = LenB(context.Body)
+		      Me.Context.Headers.Value(MyHTTPServerModule.kheadercontentlength) = LenB(context.Body)
 		      
-		      context.headers.value(MyHTTPServerModule.kHeaderConnection) = "close"
+		      // Only support close connection, so even if the handler set it
+		      // to keep-alive, we tell the client the truth.
+		      Me.Context.Headers.Value(MyHTTPServerModule.kHeaderConnection) = "close"
 		      
-		      context.headers.value(MyHTTPServerModule.kHeaderServer) = MyHTTPServerModule.VersionLongString
+		      Me.Context.Headers.Value(MyHTTPServerModule.kHeaderServer) = MyHTTPServerModule.VersionLongString
 		      
 		      // Now we pipe the data back to the client
-		      Me.write(MyHTTPServerModule.kversion + " " + HTTPStatusString(context.Status) + MyHTTPServerModule.crlf)
+		      Me.Write(MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf)
 		      
-		      For i = 0 To context.headers.count - 1
+		      For Each pKey As String In Me.Context.Headers.Keys
 		        'Me.write(context.headers.key(i).stringvalue + ": " + URLEncode(context.headers.value(context.headers.key(i)).stringvalue) + MyHTTPServerModule.crlf)
-		        Me.write(context.headers.key(i).stringvalue + ": " + context.headers.value(context.headers.key(i)).stringvalue + MyHTTPServerModule.crlf)
+		        Me.Write(pKey + ": " + Me.Context.Headers.Value(pKey) + MyHTTPServerModule.crlf)
 		      Next
 		      
-		      Me.write(MyHTTPServerModule.crlf)
-		      Me.write(context.Body)
+		      // Break a line!
+		      Me.Write(MyHTTPServerModule.crlf)
 		      
+		      // Send the body
+		      Me.Write(Me.Context.Body)
+		      
+		      // Finish it!
 		      me.Flush
 		      Me.Disconnect
+		      
 		    Else
 		      // Incomplete request
 		    End
 		    
-		    
-		    
 		    // Now we send the loop back to the beginning so we can handle the possibility of 2+
 		    // requests in a single event.
 		    data = ""
-		    la = Me.lookahead(encodings.ascii)
+		    la = Me.LookAhead(Encodings.ascii)
 		    If LenB(la) > 0 Then
-		      System.DebugLog "HTTPServer #" + Str(uid) + ": More DataAvaible - Start Over " + Str(LenB(la))
+		      System.DebugLog "HTTPServer #" + Str(Me.Identifier) + ": " + Str(LenB(la)) + "B of data available, starting over..."
 		      GoTo restartPoint
 		    End If
 		  End
@@ -167,26 +176,21 @@ Inherits TCPSocket
 		  // Constructor() -- From SocketCore
 		  Super.Constructor
 		  
-		  Parent = pParent
+		  Me.Parent = pParent
 		  
-		  uid = Lastuid + 1
-		  Lastuid = uid
+		  Me.Identifier = Self.Lastuid + 1
+		  Self.Lastuid = Me.Identifier
 		  
-		  System.DebugLog("HTTPServClientHandle("+str(uid)+"): Constuct")
+		  System.DebugLog("HTTP Server " + Str(Me.Identifier) + " is ready!")
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub Destructor()
 		  Parent = Nil
-		  System.DebugLog "HTTPServClientHandle("+str(uid)+"): Destruct"
+		  
+		  System.DebugLog "MyHTTPServer #" + Str(Me.Identifier) + ": Destruct"
 		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function Identifier() As Integer
-		  Return uid
-		End Function
 	#tag EndMethod
 
 
@@ -196,6 +200,10 @@ Inherits TCPSocket
 
 	#tag Property, Flags = &h0
 		Context As MyHTTPRequest
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Identifier As Int64
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
@@ -208,10 +216,6 @@ Inherits TCPSocket
 
 	#tag Property, Flags = &h21
 		Private Shared Searcher As Regex
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		uid As Int64
 	#tag EndProperty
 
 

@@ -55,15 +55,6 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function CreateSession() As MyHTTPServerSession
-		  Dim s As MyHTTPServerSession
-		  s = New MyHTTPServerSession
-		  sessions.append s
-		  Return s
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h1
 		Protected Function CRLF() As String
 		  Return encodings.ascii.Chr(13) + encodings.ascii.Chr(10)
 		End Function
@@ -76,17 +67,6 @@ Protected Module MyHTTPServerModule
 		  Else
 		    Return f.Name.Right(len(f.name)-InStrReverse(-1, f.Name, "."))
 		  End if
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h1
-		Protected Function FindSession(SessionID As Integer) As MyHTTPServerSession
-		  Dim i As Integer
-		  For i = 0 To ubound(sessions)
-		    If sessions(i).identifier = sessionid Then
-		      Return sessions(i)
-		    End
-		  Next
 		End Function
 	#tag EndMethod
 
@@ -2995,11 +2975,6 @@ Protected Module MyHTTPServerModule
 		     world1.gif, world2.gif
 		          These can represent 3D worlds or other 3D formats.
 	#tag EndNote
-
-
-	#tag Property, Flags = &h1
-		Protected Sessions() As MyHTTPServerSession
-	#tag EndProperty
 
 
 	#tag Constant, Name = kDefaultPort, Type = Double, Dynamic = False, Default = \"80", Scope = Protected

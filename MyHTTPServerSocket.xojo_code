@@ -54,6 +54,7 @@ Inherits ServerSocket
 		  
 		  Me.Port = MyHTTPServerModule.kDefaultPort
 		  Me.URLs = New Dictionary
+		  Me.Sessions = New Dictionary
 		End Sub
 	#tag EndMethod
 
@@ -79,34 +80,36 @@ Inherits ServerSocket
 		  //
 		  // Request are handled here before being handled by specific code
 		  //
+		  // The basic handling correspond to routing the Request to the first matching
+		  // handler that could be found in URLs.
 		  
-		  Dim url As String = pRequest.URL
+		  Dim pURL As String = pRequest.URL
 		  
-		  If URLs.HasKey(url) Then
+		  If URLs.HasKey(pURL) Then
 		    
-		    Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(url)
+		    Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(pURL)
 		    
 		    Dim pRegex As New RegEx
 		    pRegex.SearchPattern = ".+"
 		    
-		    pRequestHandler.HandleRequest(pRequest, pRegex.Search(url))
+		    pRequestHandler.HandleRequest(pRequest, pRegex.Search(pURL))
 		    
 		    Return
 		    
 		  Else
 		    
-		    For Each key As Variant In URLs.Keys
+		    For Each pKey As Variant In URLs.Keys
 		      
 		      // Try to match RegEx key
-		      If key IsA RegEx Then
+		      If pKey IsA RegEx Then
 		        
-		        Dim match As RegExMatch = RegEx(key).Search(URL)
+		        Dim pMatch As RegExMatch = RegEx(pKey).Search(pURL)
 		        
-		        If match <> Nil Then
+		        If pMatch <> Nil Then
 		          
-		          Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(key)
+		          Dim pRequestHandler As MyHTTPRequestHandler = URLs.Value(pKey)
 		          
-		          pRequestHandler.HandleRequest(pRequest, match)
+		          pRequestHandler.HandleRequest(pRequest, pMatch)
 		          
 		          Return
 		          
@@ -169,6 +172,10 @@ Inherits ServerSocket
 
 	#tag Property, Flags = &h0
 		ClientTimeOut As Integer = 10
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Sessions As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
