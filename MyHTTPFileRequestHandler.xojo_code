@@ -10,17 +10,17 @@ Implements MyHTTPRequestHandler
 
 	#tag Method, Flags = &h0
 		Sub HandleRequest(pRequest As MyHTTPRequest, pMatch As RegExMatch)
+		  #pragma Unused pMatch
+		  
 		  // Handles a File request
+		  // @todo fix multiple folder level
 		  
 		  Dim pFolderItem As FolderItem = mRoot
 		  
-		  Dim pPieces() As String = Split("/", pRequest.URL)
-		  
-		  For Each pPiece As String In pPieces
-		    
-		    pFolderItem = pFolderItem.Child(pPiece)
-		    
-		  Next
+		  If pRequest.URL <> "/" Then
+		    // Remove the / starting the URL
+		    pFolderItem = mRoot.Child(Mid(pRequest.URL, 2))
+		  End If
 		  
 		  If pFolderItem.Exists Then
 		    
@@ -32,17 +32,23 @@ Implements MyHTTPRequestHandler
 		      
 		      pRequest.Body = pRequest.Body + "<ul>"
 		      
-		      For pIndex As Integer = 0 To pFolderItem.Count - 1
-		        pRequest.Body = pRequest.Body + "<li><a href='" + pFolderItem.Item(pIndex).Name + "'" + pFolderItem.Item(pIndex).DisplayName + "</a></li>"
+		      For pIndex As Integer = 1 To pFolderItem.Count
+		        pRequest.Body = pRequest.Body + "<li><a href=""" + pFolderItem.Item(pIndex).Name + """>" + pFolderItem.Item(pIndex).DisplayName + "</a></li>"
 		      Next
 		      
 		      pRequest.Body = pRequest.Body + "</ul>"
 		      
 		    Else
 		      
+		      // Resolve Content-Type by extension
+		      pRequest.Headers.Value("Content-Type") = MyHTTPServerModule.HTTPMimeString(pFolderItem.FileExtension)
+		      
 		      // Output file content
+		      pRequest.Body = TextInputStream.Open(pFolderItem).ReadAll
 		      
 		    End If
+		    
+		  Else
 		    
 		    pRequest.Status = 404
 		    pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)

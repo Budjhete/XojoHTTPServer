@@ -145,7 +145,7 @@ Inherits ServerSocket
 		      
 		      If MyHTTPAuthRequestHandler(pRequestHandler).Authenticate(pCredentials(0), pCredentials(1)) Then
 		        
-		        System.Log(System.LogLevelNotice, "Authentication successful for user " + pCredentials(0) + " using a password.")
+		        System.Log(System.LogLevelSuccess, "Authentication successful for user " + pCredentials(0) + " using a password.")
 		        
 		      Else
 		        
@@ -161,7 +161,7 @@ Inherits ServerSocket
 		      
 		    Else
 		      
-		      System.DebugLog "Authenticating a user using a password..."
+		      System.Log(System.LogLevelNotice, "Performing HTTP Basic authentication for realm " + MyHTTPAuthRequestHandler(pRequestHandler).Realm + "...")
 		      
 		      // Authentication
 		      pRequest.Headers.Value("WWW-Authenticate") = "Basic realm=""" + MyHTTPAuthRequestHandler(pRequestHandler).Realm + """"

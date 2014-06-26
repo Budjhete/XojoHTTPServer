@@ -207,6 +207,7 @@ Protected Class MyHTTPRequest
 			Name="Body"
 			Group="Behavior"
 			Type="String"
+			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Entity"

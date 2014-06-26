@@ -72,7 +72,6 @@ Inherits TCPSocket
 		    // on an incomplete request.
 		    
 		    Dim method, url, query, version As String
-		    Dim i As Integer
 		    
 		    If data <> "" Then
 		      

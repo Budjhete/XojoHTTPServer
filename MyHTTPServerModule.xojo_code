@@ -2707,8 +2707,8 @@ Protected Module MyHTTPServerModule
 		  Dim c As Integer ' current char
 		  Dim i As Integer ' loop var
 		  
-		  Dim srcEnc, trgEnc As TextEncoding
-		  Dim conv As TextConverter
+		  // Dim srcEnc, trgEnc As TextEncoding
+		  // Dim conv As TextConverter
 		  
 		  // first, remove the unix-path-encoding:
 		  
