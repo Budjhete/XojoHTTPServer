@@ -129,6 +129,8 @@ Inherits ServerSocket
 		    pRequest.Status = 501
 		    pRequest.Body = MyHTTPServerModule.HTTPErrorHTML(pRequest.Status)
 		    
+		    Return
+		    
 		  End If
 		  
 		  // Authentication

@@ -198,26 +198,16 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPErrorHTML(StatusCode As Integer) As String
+		Function HTTPErrorHTML(Status As Integer) As String
 		  Dim s As String
 		  
-		  Select Case StatusCode
-		  Case kStatusNotFound
-		    s = s + "<html><head><title>Error 404: File Not Found</title></head>"
-		    s = s + "<body><h2>Error 404: File Not Found</h2><p>The requested URL could not be found. Please check your request and try again.</p><hr />"
-		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
-		    
-		  Case kStatusInternalServerError
-		    s = s + "<html><head><title>Error 500: Internal Server Error</title></head>"
-		    s = s + "<body><h2>Error 500: Internal Server Error</h2><p>The requested URL encountered an unhandled exception can cannot continue. Please contact the site's administrator.</p><hr />"
-		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
-		    
-		  Else
-		    s = s + "<html><head><title>Error "+str(StatusCode)+"</title></head>"
-		    s = s + "<body><h2>Error "+str(StatusCode)+"</h2><p>The server returned an error. Please check your request and try again.</p><hr />"
-		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
-		    
-		  End Select
+		  s = s + "<html><head><title>" + HTTPStatusString(Status) + "</title></head>"
+		  
+		  s = s + "<body><h2>" + HTTPStatusString(Status) + "</h2>"
+		  
+		  s = s + "<p>" + HTTPStatusMessage(Status) + "</p><hr/>"
+		  
+		  s = s + "<p><em>Powered by: " + App.LongVersion + "</em></p></body></html>"
 		  
 		  Return s
 		  
@@ -2381,15 +2371,32 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPStatusString(StatusCode As Integer) As String
-		  Select Case StatusCode
+		Sub HTTPStatusMessage()
+		  Select Case Status
+		    
+		  Case kStatusNotFound
+		    Return "The requested URL could not be found. Please check your request and try again."
+		    
+		  Case kStatusInternalServerError
+		    Return "The requested URL encountered an unhandled exception can cannot continue. Please contact the site's administrator."
+		    
+		  Else
+		    
+		  End Select
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function HTTPStatusString(Status As Integer) As String
+		  // List of all HTTP status description
+		  
+		  Select Case Status
+		    
 		  Case kStatusContinue
 		    Return "100 Continue"
 		    
 		  Case kStatusSwitchingProtocols
 		    Return "101 Switching Protocols"
-		    
-		    
 		    
 		  Case kStatusOK
 		    Return "200 OK"
@@ -2413,8 +2420,6 @@ Protected Module MyHTTPServerModule
 		    Return "206 Partial Content"
 		    
 		    
-		    
-		    
 		  Case kStatusMultipleChoices
 		    Return "300 Multiple Choices"
 		    
@@ -2435,8 +2440,6 @@ Protected Module MyHTTPServerModule
 		    
 		  Case kStatusTemporaryRedirect
 		    Return "307 Temporary Redirect"
-		    
-		    
 		    
 		    
 		  Case kStatusBadRequest
@@ -2497,8 +2500,6 @@ Protected Module MyHTTPServerModule
 		    Return "418 I'm a teapot"
 		    
 		    
-		    
-		    
 		  Case kStatusInternalServerError
 		    Return "500 Internal Server Error"
 		    
@@ -2520,12 +2521,9 @@ Protected Module MyHTTPServerModule
 		  Case kStatusBandwidthLimitExceeded
 		    Return "509 Bandwidth Limit Exceeded"
 		    
-		    
-		    
-		  Else
-		    Return str(StatusCode)+" N/A"
-		    
 		  End Select
+		  
+		  Return Str(Status) + " N/A"
 		End Function
 	#tag EndMethod
 
