@@ -2371,8 +2371,8 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub HTTPStatusMessage()
-		  Select Case Status
+		Function HTTPStatusMessage(pStatus As Integer) As String
+		  Select Case pStatus
 		    
 		  Case kStatusNotFound
 		    Return "The requested URL could not be found. Please check your request and try again."
@@ -2383,7 +2383,7 @@ Protected Module MyHTTPServerModule
 		  Else
 		    
 		  End Select
-		End Sub
+		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
