@@ -10,7 +10,7 @@ Protected Class MyHTTPRequest
 		  Me.Headers = New Dictionary
 		  Me.RequestHeaders = New Dictionary
 		  Me.Cookies = New Dictionary
-		  Me.Variables = New Dictionary
+		  Me.Query = New Dictionary
 		  
 		  // Header Date
 		  Me.Headers.Value("Date") = pNow.HTTPDate
@@ -39,7 +39,28 @@ Protected Class MyHTTPRequest
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub LoadRequestParameters(FromString As String)
+		Sub LoadQuery(FromString As String)
+		  Dim parts(),key,value As String
+		  Dim i As Integer
+		  
+		  parts = fromstring.Split("&")
+		  query = New dictionary
+		  
+		  For i = 0 To ubound(parts)
+		    key = Left(parts(i),InStr(parts(i),"=") - 1)
+		    value = Right(parts(i),Len(parts(i)) - (Len(key) + Len("=")))
+		    value = URLDecode(value)
+		    If query.haskey(key) Then
+		      query.value(key) = query.value(key) + "," + value
+		    Else
+		      query.value(key) = value
+		    End
+		  Next
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub LoadRequestHeaders(FromString As String)
 		  // Read crlf separated headers and load headers, cookies and session
 		  
 		  Dim lines() As String
@@ -99,27 +120,6 @@ Protected Class MyHTTPRequest
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub LoadVariables(FromString As String)
-		  Dim parts(),key,value As String
-		  Dim i As Integer
-		  
-		  parts = fromstring.Split("&")
-		  variables = New dictionary
-		  
-		  For i = 0 To ubound(parts)
-		    key = Left(parts(i),InStr(parts(i),"=") - 1)
-		    value = Right(parts(i),Len(parts(i)) - (Len(key) + Len("=")))
-		    value = URLDecode(value)
-		    If variables.haskey(key) Then
-		      variables.value(key) = variables.value(key) + "," + value
-		    Else
-		      variables.value(key) = value
-		    End
-		  Next
-		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
 		Sub SetCookie(Name As String, Value As String = "", Expire As Date = nil, Path As String = "/", Domain As String = ".", Secure As Boolean = False)
 		  Dim s As String = name + "=" + value
 		  
@@ -153,10 +153,6 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		Entity As String
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
 		Headers As Dictionary
 	#tag EndProperty
 
@@ -166,6 +162,10 @@ Protected Class MyHTTPRequest
 
 	#tag Property, Flags = &h0
 		Parent As MyHTTPServer
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Query As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -182,10 +182,6 @@ Protected Class MyHTTPRequest
 
 	#tag Property, Flags = &h0
 		URL As String
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		Variables As Dictionary
 	#tag EndProperty
 
 

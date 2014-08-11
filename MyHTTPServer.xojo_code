@@ -11,7 +11,7 @@ Inherits TCPSocket
 		  
 		  restartPoint:
 		  
-		  la = Me.Lookahead(Encodings.ascii)
+		  la = Me.Lookahead(Encodings.ASCII)
 		  
 		  headerslength = InStrB(la, MyHTTPServerModule.crlf + MyHTTPServerModule.crlf) - 1 // length of the headers
 		  
@@ -26,7 +26,7 @@ Inherits TCPSocket
 		    
 		    headers = LeftB(la, headerslength) // the headers
 		    Me.Context = New MyHTTPRequest(Me)
-		    Me.Context.LoadRequestParameters(headers)
+		    Me.Context.LoadRequestHeaders(headers)
 		    
 		    // Check for required headers
 		    'If MyHTTPServerModule.kVersion = "HTTP/1.1" Then
@@ -60,7 +60,7 @@ Inherits TCPSocket
 		      // The request does not contain a Content-Length header, so it must be complete.
 		      
 		      requestlength = headerslength + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf)
-		      data = Me.read(requestlength, encodings.ascii)
+		      data = Me.Read(requestlength, Encodings.ASCII)
 		      entitylength = 0
 		      entity = ""
 		      
@@ -89,21 +89,11 @@ Inherits TCPSocket
 		        query = m.SubExpressionString(4)
 		        version = m.SubExpressionString(5)
 		        
-		        If method = MyHTTPServerModule.kmethodpost Then
-		          // In the case of a post request, the query is stored in the entity, so we modify accordingly
-		          If query <> "" Then
-		            query = query + "&" + entity
-		          Else
-		            query = entity
-		          End
-		        End
-		        
 		        // We send the headers,entity & query to the context, before sending it to the handler.
 		        Me.Context.Method = method
 		        Me.Context.URL = URLDecode(url)
-		        Me.Context.LoadRequestParameters(headers)
-		        Me.Context.LoadVariables query
-		        Me.Context.Entity = entity
+		        Me.Context.LoadQuery query
+		        Me.Context.Body = entity
 		        
 		        // We ask the server to send our context to whatever is handling this url
 		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + URLDecode(url))
