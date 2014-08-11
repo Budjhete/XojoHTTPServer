@@ -18,6 +18,7 @@ Inherits TCPSocket
 		  System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": " + Str(LenB(la)) + "B of total length of data available with " + Str(headerslength) + "B of headers length.")
 		  
 		  If headerslength > 0 Then
+		    
 		    // We have a complete header. But we're not done yet. Some HTTP methods send entity
 		    // data, such as POST and PUT, which need to be read out as well, but may not be complete
 		    // yet. We determine this by reading the Content-Length header which tells us how much
@@ -35,13 +36,15 @@ Inherits TCPSocket
 		    'End If
 		    'End If
 		    
-		    If Me.Context.Headers.HasKey("Content-Length") Then
-		      // Now we know there is entity data in this request.
+		    If Me.Context.RequestHeaders.HasKey("Content-Length") Then
 		      
-		      entitylength = Val(context.Headers.Lookup("Content-Length", ""))
+		      // Now we know there is entity data in this request.
+		      entitylength = Val(context.RequestHeaders.Lookup("Content-Length", ""))
 		      requestlength = headerslength + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf) + entitylength
 		      lalength = LenB(la)
+		      
 		      If LenB(la) >= requestlength Then
+		        
 		        // We have the correct amount of data as well. We remove this data from the queue
 		        // while ensuring that later data is left intact. Sometimes, TCPSocket may fire
 		        // a DataAvailable event while having one and a half requests in the queue.
@@ -50,21 +53,25 @@ Inherits TCPSocket
 		        entity = MidB(data,headerslength + 1 + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf),entitylength)
 		        
 		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Recived Request, "+Str(requestlength)+" len")
+		        
 		      Else
+		        
 		        // There is more data to be received. We take no further action in this event, and start
 		        // over the next event, which should contain more data.
-		        
 		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Missing Data Resetting goto START")
+		        
 		      End
-		    Else
-		      // The request does not contain a Content-Length header, so it must be complete.
 		      
+		    Else
+		      
+		      // The request does not contain a Content-Length header, so it must be complete.
 		      requestlength = headerslength + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf)
 		      data = Me.Read(requestlength, Encodings.ASCII)
 		      entitylength = 0
 		      entity = ""
 		      
 		      System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Recived Request, No Length")
+		      
 		    End
 		    
 		    // Rather than duplicate code, we handle the rest outside of the entity loop. We need
@@ -93,7 +100,7 @@ Inherits TCPSocket
 		        Me.Context.Method = method
 		        Me.Context.URL = URLDecode(url)
 		        Me.Context.LoadQuery query
-		        Me.Context.Body = entity
+		        Me.Context.RequestBody = entity
 		        
 		        // We ask the server to send our context to whatever is handling this url
 		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + URLDecode(url))

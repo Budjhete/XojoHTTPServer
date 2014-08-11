@@ -169,6 +169,10 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
+		RequestBody As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
 		RequestHeaders As Dictionary
 	#tag EndProperty
 
