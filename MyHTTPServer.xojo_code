@@ -97,7 +97,20 @@ Inherits TCPSocket
 		        
 		        // We ask the server to send our context to whatever is handling this url
 		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + URLDecode(url))
-		        Me.Parent.HandleRequest(Me.Context)
+		        
+		        Try
+		          
+		          Me.Parent.HandleRequest(Me.Context)
+		          
+		        Catch re As RuntimeException
+		          
+		          System.Log(System.LogLevelError, "HTTPServer #" + Str(Me.Identifier) + ": " + re.Message)
+		          
+		          For Each pLine As String In re.Stack
+		            System.Log(System.LogLevelError, pLine)
+		          Next
+		          
+		        End Try
 		        
 		      Else
 		        
