@@ -49,7 +49,7 @@ Protected Class MyHTTPRequest
 		  For i = 0 To ubound(parts)
 		    key = Left(parts(i),InStr(parts(i),"=") - 1)
 		    value = Right(parts(i),Len(parts(i)) - (Len(key) + Len("=")))
-		    value = URLDecode(value)
+		    value = DecodeURLComponent(value)
 		    If query.haskey(key) Then
 		      query.value(key) = query.value(key) + "," + value
 		    Else
@@ -74,7 +74,7 @@ Protected Class MyHTTPRequest
 		  For i = 0 To ubound(lines)
 		    key = Left(lines(i),InStr(lines(i),":") - 1)
 		    value = Right(lines(i),Len(lines(i)) - (Len(key) + Len(": ")))
-		    value = URLDecode(value)
+		    value = DecodeURLComponent(value)
 		    RequestHeaders.value(key) = value
 		  Next
 		  
@@ -84,7 +84,7 @@ Protected Class MyHTTPRequest
 		  For i = 0 To ubound(lines)
 		    key = Left(lines(i),InStr(lines(i),"=") - 1)
 		    value = Right(lines(i),Len(lines(i)) - (Len(key) + Len("=")))
-		    value = URLDecode(value)
+		    value = DecodeURLComponent(value)
 		    Me.Cookies.Value(key) = value
 		  Next
 		  
@@ -210,12 +210,6 @@ Protected Class MyHTTPRequest
 			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="Entity"
-			Group="Behavior"
-			Type="String"
-			EditorType="MultiLineEditor"
-		#tag EndViewProperty
-		#tag ViewProperty
 			Name="Index"
 			Visible=true
 			Group="ID"
@@ -240,6 +234,11 @@ Protected Class MyHTTPRequest
 			Name="Name"
 			Visible=true
 			Group="ID"
+			Type="String"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="RequestBody"
+			Group="Behavior"
 			Type="String"
 		#tag EndViewProperty
 		#tag ViewProperty

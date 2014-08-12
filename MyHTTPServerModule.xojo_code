@@ -176,7 +176,7 @@ Protected Module MyHTTPServerModule
 		        
 		      End if
 		      
-		      s = s + "<img src="""+HTTPIconString(f.Item(i).FileExtension)+""" width=""20"" height=""22""> <a href=""./"+URLEncode(namefull)+""">"+nameshort+"    "+f.Item(i).ModificationDate.SQLDateTime+size+EndOfLine
+		      s = s + "<img src="""+HTTPIconString(f.Item(i).FileExtension)+""" width=""20"" height=""22""> <a href=""./"+EncodeURLComponent(namefull)+""">"+nameshort+"    "+f.Item(i).ModificationDate.SQLDateTime+size+EndOfLine
 		      
 		      
 		      i = i + 1
@@ -2691,103 +2691,6 @@ Protected Module MyHTTPServerModule
 		  rightPos = i
 		  
 		  Return Mid( source, leftPos, rightPos - leftPos + 1 )
-		  
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function URLDecode(s as String) As String
-		  // takes a Unix-encoded string and decodes it to the standard text encoding.
-		  
-		  // By Sascha RenÃ© Leib, published 11/08/2003 on the Athenaeum
-		  
-		  Dim r As String
-		  Dim c As Integer ' current char
-		  Dim i As Integer ' loop var
-		  
-		  // Dim srcEnc, trgEnc As TextEncoding
-		  // Dim conv As TextConverter
-		  
-		  // first, remove the unix-path-encoding:
-		  
-		  For i= 1 To LenB(s)
-		    c = AscB(MidB(s, i, 1))
-		    
-		    If c = 37 Then ' %
-		      r = r + ChrB(Val("&h" + MidB(s, i+1, 2)))
-		      i = i + 2
-		    Else
-		      r = r + ChrB(c)
-		    End If
-		    
-		  Next ' i
-		  
-		  // now we (should) have an utf-8 string
-		  // let's convert it to the standard encoding:
-		  
-		  'srcEnc = GetTextEncoding(&h0100, 0, 2) ' Unicode 2.1: UTF-8
-		  'trgEnc = GetTextEncoding(0, 0, 0) ' default encoding
-		  '
-		  'if srcEnc<>nil and trgEnc<>nil then
-		  'conv = GetTextConverter(srcEnc, trgEnc)
-		  'if conv<>nil then
-		  'conv.clear()
-		  'r = conv.convert(r)
-		  'end if
-		  'end if
-		  
-		  // if the encoding didn't work, we just return the UTF-8 string (usually right)
-		  
-		  r = ReplaceAll(r,"+"," ")
-		  
-		  Return r
-		  
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function URLEncode(s as String) As String
-		  // takes a locally encoded text string and converts it to a Unix-encoded string
-		  
-		  // By Sascha RenÃ© Leib, published 11/08/2003 on the Athenaeum
-		  
-		  Dim t As String ' encoded string
-		  Dim r As String
-		  Dim c As Integer ' current char
-		  Dim i As Integer ' loop var
-		  
-		  Dim srcEnc, trgEnc As TextEncoding
-		  Dim conv As TextConverter
-		  
-		  // in case the text converter is not available,
-		  // use at least the standard encoding:
-		  t = s
-		  
-		  // first, encode the string to UTF-8
-		  srcEnc = GetTextEncoding(0, 0, 0) ' default encoding
-		  trgEnc = GetTextEncoding(&h0100, 0, 2) ' Unicode 2.1: UTF-8
-		  If srcEnc<>Nil And trgEnc<>Nil Then
-		    conv = GetTextConverter(srcEnc, trgEnc)
-		    If conv<>Nil Then
-		      conv.clear
-		      t = conv.convert(s)
-		    End If
-		  End If
-		  
-		  For i=1 To LenB(t)
-		    c = AscB(MidB(t, i, 1))
-		    
-		    If c<=34 Or c=37 Or c=38 Then
-		      r = r + "%" + RightB("0" + Hex(c), 2)
-		    Elseif (c>=43 And c<=63) Or (c>=65 And c<=90) Or (c>=97 And c<=122) Then
-		      r = r + Chr(c)
-		    Else
-		      r = r + "%" + RightB("0" + Hex(c), 2)
-		    End If
-		    
-		  Next ' i
-		  
-		  Return r
 		  
 		End Function
 	#tag EndMethod

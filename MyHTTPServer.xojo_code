@@ -98,12 +98,12 @@ Inherits TCPSocket
 		        
 		        // We send the headers,entity & query to the context, before sending it to the handler.
 		        Me.Context.Method = method
-		        Me.Context.URL = URLDecode(url)
+		        Me.Context.URL = DecodeURLComponent(url)
 		        Me.Context.LoadQuery query
 		        Me.Context.RequestBody = entity
 		        
 		        // We ask the server to send our context to whatever is handling this url
-		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + URLDecode(url))
+		        System.Log(System.LogLevelNotice, "HTTPServer #" + Str(Me.Identifier) + ": Delegating the handling for URL " + DecodeURLComponent(url))
 		        
 		        Try
 		          
@@ -121,7 +121,7 @@ Inherits TCPSocket
 		        
 		      Else
 		        
-		        System.Log(System.LogLevelWarning, "HTTPServer #" + Str(Me.Identifier) + ": Processing a Bad Request for URL " + URLDecode(url))
+		        System.Log(System.LogLevelWarning, "HTTPServer #" + Str(Me.Identifier) + ": Processing a Bad Request for URL " + DecodeURLComponent(url))
 		        
 		        // Bad request
 		        Me.Context.Status = MyHTTPServerModule.kStatusBadRequest
@@ -129,7 +129,7 @@ Inherits TCPSocket
 		        
 		      End If
 		      
-		      System.DebugLog "HTTPServer #" + Str(Me.Identifier) + ": Responding Request with URL " + URLDecode(url)
+		      System.DebugLog "HTTPServer #" + Str(Me.Identifier) + ": Responding Request with URL " + DecodeURLComponent(url)
 		      
 		      // HTTP requests rely on the Content-Length header. Rather than require the user to set
 		      // the header, we simply add it based on the buffer size.
