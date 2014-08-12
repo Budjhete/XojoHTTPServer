@@ -56,7 +56,7 @@ Protected Module MyHTTPServerModule
 
 	#tag Method, Flags = &h1
 		Protected Function CRLF() As String
-		  Return encodings.ascii.Chr(13) + encodings.ascii.Chr(10)
+		  Return Encodings.ASCII.Chr(13) + Encodings.ASCII.Chr(10)
 		End Function
 	#tag EndMethod
 

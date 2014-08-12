@@ -44,17 +44,20 @@ Protected Class MyHTTPRequest
 		  Dim i As Integer
 		  
 		  parts = fromstring.Split("&")
-		  query = New dictionary
+		  Me.Query = New Dictionary
 		  
 		  For i = 0 To ubound(parts)
+		    
 		    key = Left(parts(i),InStr(parts(i),"=") - 1)
 		    value = Right(parts(i),Len(parts(i)) - (Len(key) + Len("=")))
 		    value = DecodeURLComponent(value)
-		    If query.haskey(key) Then
-		      query.value(key) = query.value(key) + "," + value
+		    
+		    If Me.Query.HasKey(key) Then
+		      Me.Query.Value(key) = Me.Query.Value(key) + "," + value
 		    Else
-		      query.value(key) = value
+		      Me.Query.Value(key) = value
 		    End
+		    
 		  Next
 		End Sub
 	#tag EndMethod
@@ -89,7 +92,7 @@ Protected Class MyHTTPRequest
 		  Next
 		  
 		  // Get the session
-		  Dim pSessionID As Integer = Val(Me.Cookies.Lookup("session-id", ""))
+		  Dim pSessionID As Integer = Val(Me.Cookies.Lookup("session", ""))
 		  
 		  // The server socket stores sessions in a Dictionary
 		  If Not Me.Parent.Parent.Sessions.HasKey(pSessionID) Then
@@ -109,7 +112,7 @@ Protected Class MyHTTPRequest
 		    System.DebugLog "Created a new session with id " + Str(pSessionID)
 		    
 		    // Set the session id in the cookies
-		    Me.SetCookie("session-id", Str(pSessionID))
+		    Me.SetCookie("session", Str(pSessionID))
 		    
 		  End If
 		  
