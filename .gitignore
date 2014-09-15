@@ -1,21 +1,35 @@
-# Xojo Generated Files #
-########################
-*.app
+### Xojo ###
+# Xojo (formerly REALbasic and Real Studio)
+
+Builds*
+*.debug
+*.debug.app
+Debug*.exe
+Debug*/Debug*.exe
+Debug*/Debug*\ Libs
 *.rbuistate
-*.xojo_uistate
-*Builds - *
-*.DS_Store
 *.obsolete
-Debug*.tar.gz
 
 
-# OS generated files #
-######################
+### OSX ###
 .DS_Store
-.DS_Store?
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+
+# Thumbnails
 ._*
+
+# Files that might appear on external disk
 .Spotlight-V100
 .Trashes
-Icon?
-ehthumbs.db
-Thumbs.db
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
