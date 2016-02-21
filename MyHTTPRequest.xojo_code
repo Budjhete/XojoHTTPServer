@@ -83,7 +83,7 @@ Protected Class MyHTTPRequest
 		  
 		  // Process cookies
 		  Me.Cookies = New Dictionary
-		  lines = Me.Headers.Lookup("Cookie", "").Split("; ")
+		  lines = Split(Me.Headers.Lookup("Cookie", ""), ";")'.Split("; ")
 		  For i = 0 To ubound(lines)
 		    key = Left(lines(i),InStr(lines(i),"=") - 1)
 		    value = Right(lines(i),Len(lines(i)) - (Len(key) + Len("=")))
