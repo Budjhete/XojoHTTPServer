@@ -240,18 +240,14 @@ Inherits TCPSocket
 			Visible=true
 			Group="ID"
 			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Left"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			EditorType="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
 			Visible=true
 			Group="ID"
 			Type="String"
+			EditorType="String"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Port"
@@ -265,12 +261,12 @@ Inherits TCPSocket
 			Visible=true
 			Group="ID"
 			Type="String"
+			EditorType="String"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="Top"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			Name="Identifier"
+			Group="Behavior"
+			Type="Int64"
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class
