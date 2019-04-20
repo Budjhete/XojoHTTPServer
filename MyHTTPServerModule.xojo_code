@@ -1,6 +1,6 @@
 #tag Module
 Protected Module MyHTTPServerModule
-	#tag CompatibilityFlags = (TargetConsole and (Target32Bit or Target64Bit)) or  (TargetWeb and (Target32Bit or Target64Bit)) or  (TargetDesktop and (Target32Bit or Target64Bit)) or  (TargetIOS and (Target32Bit or Target64Bit))
+	#tag CompatibilityFlags = ( TargetConsole and ( Target32Bit or Target64Bit ) ) or ( TargetWeb and ( Target32Bit or Target64Bit ) ) or ( TargetDesktop and ( Target32Bit or Target64Bit ) ) or ( TargetIOS and ( Target32Bit or Target64Bit ) )
 	#tag Method, Flags = &h0
 		Function CookieDate(Extends D As Xojo.Core.Date) As Text
 		  dim s as Text
@@ -162,10 +162,10 @@ Protected Module MyHTTPServerModule
 		    s = s + "<body><h1>Index of "+serverpath+"</h1>"
 		    s = s + "<pre>    <b>Name</b>                    <b>Last modified</b>       <b>Size</b>  <b>Description</b><hr>"
 		    
-		    s = s + "<img src="""+HTTPIconString("back")+""" width=""20"" height=""22""> <a href=""../"">Parent Directory</a>                              -   "+EndOfLine
+		    s = s + "<img src="""+ HTTPIconString("back") +""" width=""20"" height=""22""> <a href=""../"">Parent Directory</a>                              -   "+EndOfLine_
 		    
 		    i = 1
-		    for each cF as FolderItem in f.Children
+		    for each cF as Xojo.IO.FolderItem in f.Children
 		      nameshort = cF.Name
 		      namefull = cF.Name
 		      If nameshort.Length > 20 Then
@@ -202,7 +202,7 @@ Protected Module MyHTTPServerModule
 		        
 		      End if
 		      
-		      s = s + "<img src="""+HTTPIconString(cF.Extension)+""" width=""20"" height=""22""> <a href=""./"+URLEncode(namefull)+""">"+nameshort+"    "+cF.ModificationDate.SQLDateTime+size+EndOfLine
+		      s = s + "<img src="""+HTTPIconString(cF.Extension)+""" width=""20"" height=""22""> <a href=""./"+URLEncode(namefull)+""">"+nameshort+"    "+cF.ModificationDate.SQLDateTime+size+EndOfLine_
 		      
 		      
 		      i = i + 1
@@ -2812,7 +2812,7 @@ Protected Module MyHTTPServerModule
 		      dim tt as text = "0" + c.ToHex
 		      r = r + "%" + tt.Right(2)
 		    Elseif (c>=43 And c<=63) Or (c>=65 And c<=90) Or (c>=97 And c<=122) Then
-		      r = r + Chr(c)
+		      r = r + Chr(c).ToText
 		    Else
 		      dim tt as text = "0" + c.ToHex
 		      r = r + "%" + tt.Right(2)

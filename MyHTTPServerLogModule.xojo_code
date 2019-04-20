@@ -1,6 +1,6 @@
 #tag Module
 Protected Module MyHTTPServerLogModule
-	#tag CompatibilityFlags = (TargetConsole and (Target32Bit or Target64Bit)) or  (TargetWeb and (Target32Bit or Target64Bit)) or  (TargetDesktop and (Target32Bit or Target64Bit)) or  (TargetIOS and (Target32Bit or Target64Bit))
+	#tag CompatibilityFlags = ( TargetConsole and ( Target32Bit or Target64Bit ) ) or ( TargetWeb and ( Target32Bit or Target64Bit ) ) or ( TargetDesktop and ( Target32Bit or Target64Bit ) ) or ( TargetIOS and ( Target32Bit or Target64Bit ) )
 	#tag Method, Flags = &h0
 		Sub InitDebugLog()
 		  Dim tmpfolder As Xojo.IO.FolderItem
@@ -29,7 +29,7 @@ Protected Module MyHTTPServerLogModule
 		  If App.StageCode < 3 Or DebugBuild Then
 		    Try
 		      If logfile <> Nil And logfile.Exists Then
-		        DebugLogFile = Xojo.IO.BinaryStream.Open(logfile, BinaryStream.LockModes.ReadWrite)
+		        DebugLogFile = Xojo.IO.BinaryStream.Open(logfile, Xojo.IO.BinaryStream.LockModes.ReadWrite)
 		      Else
 		        DebugLogFile = Xojo.IO.BinaryStream.Create(logfile)
 		      End If
@@ -61,7 +61,7 @@ Protected Module MyHTTPServerLogModule
 		      if LastLogCount MOD 2 = 1 Then s = s + " "
 		      
 		      if LastLogCount > 1 Then
-		        dim tt as text = DebugLogPrefix+"Last Message Repeated "+Integer(LastLogCount-1).ToText+" Times"+EndOfLine
+		        dim tt as text = DebugLogPrefix+"Last Message Repeated "+Integer(LastLogCount-1).ToText+" Times"+EndOfLine_
 		        i = tt.Length+32+((LastLogCount-1) MOD 2)
 		        
 		        If DebugLogFile <> Nil Then
@@ -102,7 +102,7 @@ Protected Module MyHTTPServerLogModule
 		  
 		  if s <> "" Then
 		    If DebugLogFile <> Nil Then
-		      DebugLogFile.Write(Xojo.Core.TextEncoding.UTF8.ConvertTextToData(EndOfLine+s))
+		      DebugLogFile.Write(Xojo.Core.TextEncoding.UTF8.ConvertTextToData(EndOfLine_+s))
 		      DebugLogFile.Flush
 		    Else
 		      System.DebugLog(s)
@@ -121,7 +121,7 @@ Protected Module MyHTTPServerLogModule
 
 
 	#tag Property, Flags = &h0
-		DataFolder As FolderItem
+		DataFolder As Xojo.IO.FolderItem
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
