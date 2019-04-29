@@ -145,7 +145,7 @@ Inherits ServerSocket
 		      
 		      Dim pCredentials() As String = Split(pSecret, ":")
 		      
-		      If MyHTTPAuthRequestHandler(pRequestHandler).Authenticate(pCredentials(0), pCredentials(1)) Then
+		      If MyHTTPAuthRequestHandler(pRequestHandler).Authenticate(pCredentials(0).DefineEncoding(Encodings.UTF8).ToText, pCredentials(1).DefineEncoding(Encodings.UTF8).ToText) Then
 		        
 		        System.Log(System.LogLevelSuccess, "Authentication successful for user " + pCredentials(0) + " using a password.")
 		        
@@ -248,12 +248,7 @@ Inherits ServerSocket
 			Visible=true
 			Group="ID"
 			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Left"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			EditorType="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="MaximumSocketsConnected"
@@ -274,6 +269,7 @@ Inherits ServerSocket
 			Visible=true
 			Group="ID"
 			Type="String"
+			EditorType="String"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Port"
@@ -287,12 +283,7 @@ Inherits ServerSocket
 			Visible=true
 			Group="ID"
 			Type="String"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Top"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			EditorType="String"
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class

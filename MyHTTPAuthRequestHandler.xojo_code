@@ -2,7 +2,7 @@
 Protected Interface MyHTTPAuthRequestHandler
 Implements MyHTTPRequestHandler
 	#tag Method, Flags = &h0
-		Function Authenticate(pUsername As String, pPassword As String) As Boolean
+		Function Authenticate(pUsername As Text, pPassword As Text) As Boolean
 		  
 		End Function
 	#tag EndMethod

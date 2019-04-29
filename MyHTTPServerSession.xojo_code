@@ -25,7 +25,7 @@ Protected Class MyHTTPServerSession
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function Value(Key As Text) As Auto
+		Function Value(Key As String) As Auto
 		  if data.haskey(key) then
 		    return data.value(key)
 		  else
@@ -35,7 +35,7 @@ Protected Class MyHTTPServerSession
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub Value(Key As Text, Assigns NewValue As Auto)
+		Sub Value(Key As String, Assigns NewValue As Auto)
 		  data.value(key) = newvalue
 		End Sub
 	#tag EndMethod
