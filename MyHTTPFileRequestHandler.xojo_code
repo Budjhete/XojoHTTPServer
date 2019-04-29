@@ -1,8 +1,9 @@
 #tag Class
 Protected Class MyHTTPFileRequestHandler
 Implements MyHTTPRequestHandler
+	#tag CompatibilityFlags = false
 	#tag Method, Flags = &h0
-		Sub Constructor(pRoot As FolderItem)
+		Sub Constructor(pRoot As Xojo.IO.FolderItem)
 		  // The handler will serve files under the root FolderItem
 		  mRoot = pRoot
 		End Sub
@@ -15,16 +16,16 @@ Implements MyHTTPRequestHandler
 		  // Handles a File request
 		  // @todo fix multiple folder level
 		  
-		  Dim pFolderItem As FolderItem = mRoot
+		  Dim pFolderItem As Xojo.IO.FolderItem = mRoot
 		  
 		  If pRequest.URL <> "/" Then
 		    // Remove the / starting the URL
-		    pFolderItem = mRoot.Child(Mid(pRequest.URL, 2))
+		    pFolderItem = mRoot.Child(pRequest.URL.ToText.Mid(2))
 		  End If
 		  
 		  If pFolderItem.Exists Then
 		    
-		    If pFolderItem.Directory Then
+		    If pFolderItem.IsFolder Then
 		      
 		      // List directory content
 		      
@@ -41,7 +42,7 @@ Implements MyHTTPRequestHandler
 		    Else
 		      
 		      // Resolve Content-Type by extension
-		      pRequest.Headers.Value("Content-Type") = MyHTTPServerModule.HTTPMimeString(pFolderItem.FileExtension)
+		      pRequest.Headers.Value("Content-Type") = MyHTTPServerModule.HTTPMimeString(pFolderItem.Extension)
 		      
 		      // Output file content
 		      pRequest.Body = TextInputStream.Open(pFolderItem).ReadAll
@@ -61,7 +62,7 @@ Implements MyHTTPRequestHandler
 
 
 	#tag Property, Flags = &h21
-		Private mRoot As FolderItem
+		Private mRoot As Xojo.IO.FolderItem
 	#tag EndProperty
 
 

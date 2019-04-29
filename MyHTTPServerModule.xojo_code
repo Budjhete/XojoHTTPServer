@@ -1,8 +1,9 @@
 #tag Module
 Protected Module MyHTTPServerModule
+	#tag CompatibilityFlags = ( TargetConsole and ( Target32Bit or Target64Bit ) ) or ( TargetWeb and ( Target32Bit or Target64Bit ) ) or ( TargetDesktop and ( Target32Bit or Target64Bit ) ) or ( TargetIOS and ( Target32Bit or Target64Bit ) )
 	#tag Method, Flags = &h0
-		Function CookieDate(Extends D As Date) As String
-		  dim s as string
+		Function CookieDate(Extends D As Xojo.Core.Date) As String
+		  dim s as Text
 		  select case d.dayofweek
 		  case 1
 		    s = "Sun"
@@ -49,33 +50,54 @@ Protected Module MyHTTPServerModule
 		    s = s + "Dec"
 		  end
 		  
-		  s = s + "-" + str(d.year) + " " + zeropad(d.hour) + ":" + zeropad(d.minute) + ":" + zeropad(d.second) + " GMT"
+		  s = s + "-" + d.year.ToText + " " + zeropad(d.hour) + ":" + zeropad(d.minute) + ":" + zeropad(d.second) + " GMT"
 		  return s
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function CRLF() As String
-		  Return Encodings.ASCII.Chr(13) + Encodings.ASCII.Chr(10)
+		Protected Function CreateSession() As MyHTTPServerSession
+		  Dim s As MyHTTPServerSession
+		  s = New MyHTTPServerSession
+		  sessions.append s
+		  Return s
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h1, CompatibilityFlags = (TargetConsole and (Target32Bit)) or  (TargetWeb and (Target32Bit or Target64Bit)) or  (TargetDesktop and (Target32Bit or Target64Bit))
+		Protected Function CRLF() As Text
+		  Return Text.FromUnicodeCodepoint(13) + Text.FromUnicodeCodepoint(10)
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function FileExtension(Extends f As FolderItem) As String
-		  if f.Directory Then
+		Function FileExtension(Extends f As Xojo.io.FolderItem) As Text
+		  if f.IsFolder Then
 		    Return "folder"
 		  Else
-		    Return f.Name.Right(len(f.name)-InStrReverse(-1, f.Name, "."))
+		    Return f.Name.Right(f.name.Length-InStrReverse(-1, f.Name, "."))
 		  End if
 		End Function
 	#tag EndMethod
 
+	#tag Method, Flags = &h1
+		Protected Function FindSession(SessionID As Integer) As MyHTTPServerSession
+		  Dim i As Integer
+		  For i = 0 To ubound(sessions)
+		    If sessions(i).identifier = sessionid Then
+		      Return sessions(i)
+		    End
+		  Next
+		End Function
+	#tag EndMethod
+
 	#tag Method, Flags = &h0
-		Function HTTPDate(Extends myDate As Date) As String
-		  Dim d As New Date(myDate)
-		  Dim s As String
+		Function HTTPDate(Extends myDate As Xojo.Core.Date) As Text
+		  Dim s As Text
 		  
-		  d.GMTOffset = 0
+		  Dim GMTZone As New Xojo.Core.TimeZone("GMT")
+		  Dim d As New Xojo.Core.Date(myDate.SecondsFrom1970, GMTZone)
+		  
 		  
 		  Select Case d.dayofweek
 		  Case 1
@@ -123,52 +145,56 @@ Protected Module MyHTTPServerModule
 		    s = s + "Dec"
 		  End
 		  
-		  s = s + " " + Str(d.year) + " " + zeropad(d.hour) + ":" + zeropad(d.minute) + ":" + zeropad(d.second) + " GMT"
+		  s = s + " " + d.year.ToText + " " + zeropad(d.hour) + ":" + zeropad(d.minute) + ":" + zeropad(d.second) + " GMT"
 		  Return s
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPDirectoryHTML(serverpath As String, f As FolderItem) As String
-		  Dim s, nameshort, namefull, size As String
+		Function HTTPDirectoryHTML(serverpath As Text, f As Xojo.IO.FolderItem) As Text
+		  Dim s, nameshort, namefull, size As Text
 		  Dim i As Integer
 		  
-		  If f.Directory Then
+		  If f.IsFolder Then
 		    
 		    s = s + "<!DOCTYPE HTML PUBLIC ""-//W3C//DTD HTML 3.2 Final//EN"">"
 		    s = s + "<html><head><title>Index of "+serverpath+"</title></head>"
 		    s = s + "<body><h1>Index of "+serverpath+"</h1>"
 		    s = s + "<pre>    <b>Name</b>                    <b>Last modified</b>       <b>Size</b>  <b>Description</b><hr>"
 		    
-		    s = s + "<img src="""+HTTPIconString("back")+""" width=""20"" height=""22""> <a href=""../"">Parent Directory</a>                              -   "+EndOfLine
+		    s = s + "<img src="""+ HTTPIconString("back") +""" width=""20"" height=""22""> <a href=""../"">Parent Directory</a>                              -   "+EndOfLine_
 		    
 		    i = 1
-		    While i <= f.Count
-		      nameshort = f.Item(i).Name
-		      namefull = f.Item(i).Name
-		      If Len(nameshort) > 20 Then
+		    for each cF as Xojo.IO.FolderItem in f.Children
+		      nameshort = cF.Name
+		      namefull = cF.Name
+		      If nameshort.Length > 20 Then
 		        nameshort = nameshort.Left(17)+"..>"
 		      End If
 		      nameshort = PadRight(nameshort+"</a>", 24)
 		      
-		      if f.Item(i).Directory Then
+		      if cF.IsFolder Then
 		        namefull = namefull+"/"
 		        size = "   -   "
 		      Else
-		        If f.Item(i).Length >= 1099511627776 Then ' terebyte
-		          size = Str(Floor(f.Item(i).Length/1099511627776))+"T"
+		        If cF.Length >= 1099511627776 Then ' terebyte
+		          dim d as Double = Xojo.Math.Floor(cF.Length/1099511627776)
+		          size = d.ToText+"T"
 		          
-		        Elseif f.Item(i).Length >= 1073741824 Then ' gigabytes
-		          size = Str(Floor(f.Item(i).Length/1073741824))+"T"
+		        Elseif cF.Length >= 1073741824 Then ' gigabytes
+		          dim d as Double = Xojo.Math.Floor(cF.Length/1073741824)
+		          size = d.ToText+"T"
 		          
-		        Elseif f.Item(i).Length >= 1048576 Then ' megabytes
-		          size = Str(Floor(f.Item(i).Length/1048576))+"M"
+		        Elseif cF.Length >= 1048576 Then ' megabytes
+		          dim d as Double = Xojo.Math.Floor(cF.Length/1048576)
+		          size = d.ToText+"M"
 		          
-		        Elseif f.Item(i).Length >= 1024 Then  ' kilobytes
-		          size = Str(Floor(f.Item(i).Length/1024 ))+"K"
+		        Elseif cF.Length >= 1024 Then  ' kilobytes
+		          dim d as Double = Xojo.Math.Floor(cF.Length/1024 )
+		          size = d.ToText+"K"
 		          
 		        Else 'bytes
-		          size = Str(f.Item(i).Length)+"B"
+		          size = cF.Length.ToText+"B"
 		          
 		        End If
 		        
@@ -176,11 +202,12 @@ Protected Module MyHTTPServerModule
 		        
 		      End if
 		      
-		      s = s + "<img src="""+HTTPIconString(f.Item(i).FileExtension)+""" width=""20"" height=""22""> <a href=""./"+EncodeURLComponent(namefull)+""">"+nameshort+"    "+f.Item(i).ModificationDate.SQLDateTime+size+EndOfLine
+		      s = s + "<img src="""+HTTPIconString(cF.Extension)+""" width=""20"" height=""22""> <a href=""./"+URLEncode(namefull)+""">"+nameshort+"    "+cF.ModificationDate.SQLDateTime+size+EndOfLine_
 		      
 		      
 		      i = i + 1
-		    Wend
+		      
+		    next
 		    
 		    s = s + "<hr></pre>"
 		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p>"
@@ -198,16 +225,26 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPErrorHTML(Status As Integer) As String
-		  Dim s As String
+		Function HTTPErrorHTML(StatusCode As Integer) As Text
+		  Dim s As Text
 		  
-		  s = s + "<html><head><title>" + HTTPStatusString(Status) + "</title></head>"
-		  
-		  s = s + "<body><h2>" + HTTPStatusString(Status) + "</h2>"
-		  
-		  s = s + "<p>" + HTTPStatusMessage(Status) + "</p><hr/>"
-		  
-		  s = s + "<p><em>Powered by: " + App.LongVersion + "</em></p></body></html>"
+		  Select Case StatusCode
+		  Case kStatusNotFound
+		    s = s + "<html><head><title>Error 404: File Not Found</title></head>"
+		    s = s + "<body><h2>Error 404: File Not Found</h2><p>The requested URL could not be found. Please check your request and try again.</p><hr />"
+		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
+		    
+		  Case kStatusInternalServerError
+		    s = s + "<html><head><title>Error 500: Internal Server Error</title></head>"
+		    s = s + "<body><h2>Error 500: Internal Server Error</h2><p>The requested URL encountered an unhandled exception can cannot continue. Please contact the site's administrator.</p><hr />"
+		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
+		    
+		  Else
+		    s = s + "<html><head><title>Error "+StatusCode.ToText+"</title></head>"
+		    s = s + "<body><h2>Error "+StatusCode.ToText+"</h2><p>The server returned an error. Please check your request and try again.</p><hr />"
+		    s = s + "<p><em>Powered by: " + VersionLongString + "</em></p></body></html>"
+		    
+		  End Select
 		  
 		  Return s
 		  
@@ -215,8 +252,8 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPIconString(ext As String) As String
-		  ext = Lowercase(ext)
+		Function HTTPIconString(ext As Text) As Text
+		  ext = ext.Lowercase
 		  
 		  Select Case ext
 		  Case "back"
@@ -266,8 +303,8 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPMimeString(ext As String) As String
-		  ext = Lowercase(ext)
+		Function HTTPMimeString(ext As Text) As Text
+		  ext = ext.Lowercase
 		  
 		  Select Case ext
 		  Case "ez"
@@ -2371,32 +2408,15 @@ Protected Module MyHTTPServerModule
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function HTTPStatusMessage(pStatus As Integer) As String
-		  Select Case pStatus
-		    
-		  Case kStatusNotFound
-		    Return "The requested URL could not be found. Please check your request and try again."
-		    
-		  Case kStatusInternalServerError
-		    Return "The requested URL encountered an unhandled exception can cannot continue. Please contact the site's administrator."
-		    
-		  Else
-		    
-		  End Select
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Function HTTPStatusString(Status As Integer) As String
-		  // List of all HTTP status description
-		  
-		  Select Case Status
-		    
+		Function HTTPStatusString(StatusCode As Integer) As Text
+		  Select Case StatusCode
 		  Case kStatusContinue
 		    Return "100 Continue"
 		    
 		  Case kStatusSwitchingProtocols
 		    Return "101 Switching Protocols"
+		    
+		    
 		    
 		  Case kStatusOK
 		    Return "200 OK"
@@ -2420,6 +2440,8 @@ Protected Module MyHTTPServerModule
 		    Return "206 Partial Content"
 		    
 		    
+		    
+		    
 		  Case kStatusMultipleChoices
 		    Return "300 Multiple Choices"
 		    
@@ -2440,6 +2462,8 @@ Protected Module MyHTTPServerModule
 		    
 		  Case kStatusTemporaryRedirect
 		    Return "307 Temporary Redirect"
+		    
+		    
 		    
 		    
 		  Case kStatusBadRequest
@@ -2500,6 +2524,8 @@ Protected Module MyHTTPServerModule
 		    Return "418 I'm a teapot"
 		    
 		    
+		    
+		    
 		  Case kStatusInternalServerError
 		    Return "500 Internal Server Error"
 		    
@@ -2521,86 +2547,89 @@ Protected Module MyHTTPServerModule
 		  Case kStatusBandwidthLimitExceeded
 		    Return "509 Bandwidth Limit Exceeded"
 		    
+		    
+		    
+		  Else
+		    Return StatusCode.ToText+" N/A"
+		    
 		  End Select
-		  
-		  Return Str(Status) + " N/A"
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function InStrReverse(startPos As Integer = - 1, source As String, substr As String) As Integer
+		Protected Function InStrReverse(startPos As Integer = -1, source As Text, substr As Text) As Integer
 		  // Similar to InStr, but searches backwards from the given position
 		  // (or if startPos = -1, then from the end of the string).
 		  // If substr can't be found, returns 0.
 		  
-		  Dim srcLen As Integer = source.Len
+		  Dim srcLen As Integer = source.Length
 		  If startPos = -1 Then startPos = srcLen
 		  
 		  // Here's an easy way...
 		  // There may be a faster implementation, but then again, there may not -- it probably
 		  // depends on the particulars of the data.
-		  Dim reversedSource As String = Reverse(source)
-		  Dim reversedSubstr As String = Reverse(substr)
+		  Dim reversedSource As Text = Reverse(source)
+		  Dim reversedSubstr As Text = Reverse(substr)
 		  Dim reversedPos As Integer
-		  reversedPos = InStr( srcLen - startPos + 1, reversedSource, reversedSubstr )
+		  reversedPos = reversedSource.IndexOf(srcLen - startPos + 1, reversedSubstr )
 		  If reversedPos < 1 Then Return 0
-		  Return srcLen - reversedPos - substr.Len + 2
+		  Return srcLen - reversedPos - substr.Length + 2
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function LTrim(source As String, charsToTrim As String) As String
+		Protected Function LTrim(source As Text, charsToTrim As Text) As Text
 		  // This is an extended version of RB's LTrim function that lets you specify
 		  // a set of characters to trim.
 		  
-		  Dim srcLen As Integer = source.Len
+		  Dim srcLen As Integer = source.Length
 		  Dim leftPos, i As Integer
 		  for i = 1 to srcLen
-		    if InStr( charsToTrim, Mid(source, i, 1) ) = 0 then exit
+		    if charsToTrim.IndexOf(source.Mid( i, 1) ) = 0 then exit
 		  next
 		  leftPos = i
 		  if leftPos > srcLen then return ""
 		  
-		  return Mid( source, leftPos )
+		  return source.Mid(leftPos )
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function PadLeft(s as String, width as Integer, padding as String = " ") As String
+		Protected Function PadLeft(s as Text, width as Integer, padding as Text = " ") As Text
 		  // Pad a string to at least 'width' characters, by adding padding characters
 		  // to the left side of the string.
 		  
 		  Dim length As Integer
-		  length = Len(s)
+		  length = s.Length
 		  If length >= width Then Return s
 		  
 		  Dim mostToRepeat As Integer
-		  mostToRepeat = Ceil((width-length)/Len(padding))
-		  Return Mid(Repeat(padding, mostToRepeat),1,width-length) + s
+		  mostToRepeat = Ceil((width-length)/padding.Length)
+		  Return Repeat(padding, mostToRepeat).Mid(1,width-length) + s
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function PadRight(s as String, width as Integer, padding as String = " ") As String
+		Protected Function PadRight(s as Text, width as Integer, padding as Text = " ") As Text
 		  // Pad a string to at least 'width' characters, by adding padding characters
 		  // to the right side of the string.
 		  
 		  Dim length As Integer
-		  length = Len(s)
+		  length = s.Length
 		  If length >= width Then Return s
 		  
 		  Dim mostToRepeat As Integer
-		  mostToRepeat = Ceil((width-length)/Len(padding))
-		  Return s + Mid(Repeat(padding, mostToRepeat),1,width-length)
+		  mostToRepeat = Ceil((width-length)/padding.Length)
+		  Return s + Repeat(padding, mostToRepeat).Mid(1,width-length)
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function Repeat(s as String, repeatCount as Integer) As String
+		Protected Function Repeat(s as Text, repeatCount as Integer) As Text
 		  // Concatenate a string to itself 'repeatCount' times.
 		  // Example: Repeat("spam ", 5) = "spam spam spam spam spam ".
 		  
@@ -2616,93 +2645,194 @@ Protected Module MyHTTPServerModule
 		  // is faster than any other we've found (short of declares, which were only
 		  // about 2X faster and were quite platform-specific).
 		  
-		  Dim desiredLenB As Integer = LenB(s) * repeatCount
-		  Dim output As String = s
+		  Dim desiredLenB As Integer = s.Length * repeatCount
+		  Dim output As Text = s
 		  Dim cutoff As Integer = (desiredLenB+1)\2
-		  Dim curLenB As Integer = LenB(output)
+		  Dim curLenB As Integer = output.Length
 		  
 		  While curLenB < cutoff
 		    output = output + output
 		    curLenB = curLenB + curLenB
 		  Wend
 		  
-		  output = output + LeftB(output, desiredLenB - curLenB)
+		  output = output + output.Left(desiredLenB - curLenB)
 		  Return output
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function Reverse(s As String) As String
+		Protected Function Reverse(s As Text) As Text
 		  // Return s with the characters in reverse order.
 		  
-		  if Len(s) < 2 then return s
+		  if s.Length < 2 then return s
 		  
-		  Dim characters() as String = Split( s, "" )
+		  Dim characters() as Text = s.Split("")
 		  Dim leftIndex as Integer = 0
 		  Dim rightIndex as Integer = UBound(characters)
 		  #pragma BackgroundTasks False
 		  While leftIndex < rightIndex
-		    Dim temp as String = characters(leftIndex)
+		    Dim temp as Text = characters(leftIndex)
 		    characters(leftIndex) = characters(rightIndex)
 		    characters(rightIndex) = temp
 		    leftIndex = leftIndex + 1
 		    rightIndex = rightIndex - 1
 		  Wend
-		  Return Join( characters, "" )
+		  Return Text.Join( characters, "" )
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function RTrim(source As String, charsToTrim As String) As String
+		Protected Function RTrim(source As Text, charsToTrim As Text) As Text
 		  // This is an extended version of RB's RTrim function that lets you specify
 		  // a set of characters to trim.
 		  
-		  Dim srcLen As Integer = source.Len
+		  Dim srcLen As Integer = source.Length
 		  Dim rightPos, i As Integer
 		  for i = srcLen DownTo 1
-		    if InStr( charsToTrim, Mid(source, i, 1) ) = 0 then exit
+		    if charsToTrim.IndexOf( source.Mid( i, 1) ) = 0 then exit
 		  next
 		  rightPos = i
 		  
-		  return Mid( source, 1, rightPos )
+		  return source.Mid( 1, rightPos )
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function Trim(source As String, charsToTrim As String) As String
+		Protected Function Trim(source As Text, charsToTrim As Text) As Text
 		  // This is an extended version of RB's Trim function that lets you specify
 		  // a set of characters to trim.
 		  
-		  Dim srcLen As Integer = source.Len
+		  Dim srcLen As Integer = source.Length
 		  Dim leftPos, i As Integer
 		  For i = 1 To srcLen
-		    If InStr( charsToTrim, Mid(source, i, 1) ) = 0 Then Exit
+		    If charsToTrim.IndexOf(source.Mid( i, 1) ) = 0 Then Exit
 		  Next
 		  leftPos = i
 		  If leftPos > srcLen Then Return ""
 		  
 		  Dim rightPos As Integer
 		  For i = srcLen DownTo 1
-		    If InStr( charsToTrim, Mid(source, i, 1) ) = 0 Then Exit
+		    If charsToTrim.IndexOf(source.Mid(i, 1) ) = 0 Then Exit
 		  Next
 		  rightPos = i
 		  
-		  Return Mid( source, leftPos, rightPos - leftPos + 1 )
+		  Return source.Mid(leftPos, rightPos - leftPos + 1 )
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function URLDecode(s as Text) As Text
+		  // takes a Unix-encoded string and decodes it to the standard text encoding.
+		  
+		  // By Sascha RenÃ© Leib, published 11/08/2003 on the Athenaeum
+		  
+		  Dim r As Text
+		  Dim c As Integer ' current char
+		  Dim i As Integer ' loop var
+		  
+		  Dim srcEnc, trgEnc As TextEncoding
+		  'Dim conv As TextConverter
+		  
+		  // first, remove the unix-path-encoding:
+		  
+		  For i= 1 To s.Length
+		    c = s.Mid( i, 1).Asc // AscB
+		    
+		    If c = 37 Then ' %
+		      dim TT as text = "&h" + s.Mid(i+1, 2)
+		      r = r + tt.HexToInt.ToText
+		      i = i + 2
+		    Else
+		      r = r + Text.FromUnicodeCodepoint(c)  //chrB
+		    End If
+		    
+		  Next ' i
+		  
+		  // now we (should) have an utf-8 string
+		  // let's convert it to the standard encoding:
+		  
+		  'srcEnc = GetTextEncoding(&h0100, 0, 2) ' Unicode 2.1: UTF-8
+		  'trgEnc = GetTextEncoding(0, 0, 0) ' default encoding
+		  '
+		  'if srcEnc<>nil and trgEnc<>nil then
+		  'conv = GetTextConverter(srcEnc, trgEnc)
+		  'if conv<>nil then
+		  'conv.clear()
+		  'r = conv.convert(r)
+		  'end if
+		  'end if
+		  
+		  // if the encoding didn't work, we just return the UTF-8 string (usually right)
+		  
+		  r = r.ReplaceAll("+"," ")
+		  
+		  Return r
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function URLEncode(s as Text) As Text
+		  // takes a locally encoded text string and converts it to a Unix-encoded string
+		  
+		  // By Sascha RenÃ© Leib, published 11/08/2003 on the Athenaeum
+		  
+		  Dim t As Text ' encoded string
+		  Dim r As Text
+		  Dim c As Integer ' current char
+		  Dim i As Integer ' loop var
+		  
+		  'Dim srcEnc, trgEnc As Xojo.Core.TextEncoding
+		  'Dim conv As TextConverter
+		  
+		  // in case the text converter is not available,
+		  // use at least the standard encoding:
+		  t = s
+		  
+		  // first, encode the string to UTF-8
+		  'srcEnc = Xojo.Core.TextEncoding.ASCII //GetTextEncoding(0, 0, 0) ' default encoding
+		  'trgEnc = Xojo.Core.TextEncoding.UTF8 //GetTextEncoding(&h0100, 0, 2) ' Unicode 2.1: UTF-8
+		  'If srcEnc<>Nil And trgEnc<>Nil Then
+		  ''conv = GetTextConverter(srcEnc, trgEnc)
+		  ''If conv<>Nil Then
+		  ''conv.clear
+		  ''t = Xojo.Core.TextEncoding.UTF8.ConvertTextToData
+		  ''End If
+		  't = Xojo.Core.TextEncoding.UTF8.ConvertDataToText(s)
+		  'End If
+		  
+		  For i=1 To t.Length
+		    c = t.Mid( i, 1).Asc
+		    
+		    If c<=34 Or c=37 Or c=38 Then
+		      dim tt as text = "0" + c.ToHex
+		      r = r + "%" + tt.Right(2)
+		    Elseif (c>=43 And c<=63) Or (c>=65 And c<=90) Or (c>=97 And c<=122) Then
+		      r = r + Chr(c).ToText
+		    Else
+		      dim tt as text = "0" + c.ToHex
+		      r = r + "%" + tt.Right(2)
+		    End If
+		    
+		  Next ' i
+		  
+		  Return r
 		  
 		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h1
-		Protected Function ZeroPad(Num As Integer, Length As Integer = 2) As String
+		Protected Function ZeroPad(Num As Integer, Length As Integer = 2) As Text
 		  Dim i As Integer
-		  Dim s As String
+		  Dim s As Text
 		  For i = 1 To length
 		    s = s + "0"
 		  Next
-		  Return Left(s,Len(s) - Len(Str(num))) + Str(num)
+		  Return s.Left(s.Length - num.ToText.Length) + num.ToText
 		End Function
 	#tag EndMethod
 
@@ -2878,6 +3008,11 @@ Protected Module MyHTTPServerModule
 	#tag EndNote
 
 
+	#tag Property, Flags = &h1, CompatibilityFlags = (TargetConsole and (Target32Bit or Target64Bit)) or  (TargetWeb and (Target32Bit or Target64Bit)) or  (TargetDesktop and (Target32Bit or Target64Bit)) or  (TargetIOS and (Target32Bit or Target64Bit))
+		Protected Sessions() As MyHTTPServerSession
+	#tag EndProperty
+
+
 	#tag Constant, Name = kDefaultPort, Type = Double, Dynamic = False, Default = \"80", Scope = Protected
 	#tag EndConstant
 
@@ -3028,49 +3163,49 @@ Protected Module MyHTTPServerModule
 	#tag Constant, Name = kHeaderWWWAuthenticate, Type = String, Dynamic = False, Default = \"WWW-Authenticate", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Back, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAOYAABkLC7y8vHFxccwAAJkAAEVBQfVBQWYAAKejo97e3pkzM4yMjDUfH9MzM6hzc2EoKGZmZkIDA7YAANbW1uVR\rUebm5tcbG5ZQULUfH+94eMzMzE9PT5mZmfYoKP9aWrW1tTswMDgWFndra40AALoPD+F3dykcHI59fe/v73g4ON8LC+kjI8hJSZWP\rj4IAACMPD/g4OGNBQeNKSug8PGBTU00kJPBtbcXFxaeMjK2trXwBAZlmZrNERK4AADMAAIN8fP9UVMEJCU47O14AAJ50dMcYGI1h\rYfIpKfIaGv5LS+AREU4/P/8zM80MDFdXV3IAAPRMTOUwMLR0dFEBAYg2NnRTU/9mZnt7e/QkJKQAAP1CQjsrK/V1dVEsLFUxMZmZ\rmYeHh/9mZqkFBWYzM7IqKsQQEIyGhmFNTVJMTCgPD8AAANsXF0I1NSEICHxtbekLC/89PekODvE6OkpCQllQUK6KisMICNQMDP//\r/wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAHgALAAAAAAUABYAAAf/gHiCg4SFhoYcHDcVjCiHhhMFMWgtEwkVjo+CKBpVZA9L\rOZaZjygJH0IrGF4tGgmkhxUTZilYJC+tr5oVCRo0DUhiDAgTFZqmGhwXRyoHaDfFhZcovBofRjBKEiEIroOcdAsJCRMaOQ4GSgNT\rEDcJghU3O1RXN/Y5OCVQa2o6bB8T8FT4cIKCAici3LiRksEKFAsSXGz5oKFCgDpcgBjgwUIGEA8gZ5TpcQBEDg0IiNiwAkQLnJcv\r5UQpIoZABAgUz8zQkkRLh58dVlgoQyLLiCcvFgSY0GIMkw5I4qi4cydIjywERgwBACGHuwk/ulh4M0CChKsEXAzxYUIAgqXVRH7U\rsKMDwIu7ANKAgMAhRwBX1BLcuAJgyoYFYBZwQIDALzRdAifcAJPGSY4cHwLY02AJE6FqiW5o4Dyu0aHAli55PhQIADs\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Back, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAOYAABkLC7y8vHFxccwAAJkAAEVBQfVBQWYAAKejo97e3pkzM4yMjDUfH9MzM6hzc2EoKGZmZkIDA7YAANbW1uVR\rUebm5tcbG5ZQULUfH+94eMzMzE9PT5mZmfYoKP9aWrW1tTswMDgWFndra40AALoPD+F3dykcHI59fe/v73g4ON8LC+kjI8hJSZWP\rj4IAACMPD/g4OGNBQeNKSug8PGBTU00kJPBtbcXFxaeMjK2trXwBAZlmZrNERK4AADMAAIN8fP9UVMEJCU47O14AAJ50dMcYGI1h\rYfIpKfIaGv5LS+AREU4/P/8zM80MDFdXV3IAAPRMTOUwMLR0dFEBAYg2NnRTU/9mZnt7e/QkJKQAAP1CQjsrK/V1dVEsLFUxMZmZ\rmYeHh/9mZqkFBWYzM7IqKsQQEIyGhmFNTVJMTCgPD8AAANsXF0I1NSEICHxtbekLC/89PekODvE6OkpCQllQUK6KisMICNQMDP//\r/wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAHgALAAAAAAUABYAAAf/gHiCg4SFhoYcHDcVjCiHhhMFMWgtEwkVjo+CKBpVZA9L\rOZaZjygJH0IrGF4tGgmkhxUTZilYJC+tr5oVCRo0DUhiDAgTFZqmGhwXRyoHaDfFhZcovBofRjBKEiEIroOcdAsJCRMaOQ4GSgNT\rEDcJghU3O1RXN/Y5OCVQa2o6bB8T8FT4cIKCAici3LiRksEKFAsSXGz5oKFCgDpcgBjgwUIGEA8gZ5TpcQBEDg0IiNiwAkQLnJcv\r5UQpIoZABAgUz8zQkkRLh58dVlgoQyLLiCcvFgSY0GIMkw5I4qi4cydIjywERgwBACGHuwk/ulh4M0CChKsEXAzxYUIAgqXVRH7U\rsKMDwIu7ANKAgMAhRwBX1BLcuAJgyoYFYBZwQIDALzRdAifcAJPGSY4cHwLY02AJE6FqiW5o4Dyu0aHAli55PhQIADs\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Binary, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTNbW1rW1tZmZmf///2ZmZszMzO/v76WlpWZmZnp6er29vebm5ltbW62trYWFhff398XFxd3d3XNzc1BQ\rUIyMjP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXzoLAsQumcyIAIAWO970LMNAEdgeoY\rLiwfCgOh0FAwcioEDyYgDAAGgYLQiOQiyaWlOTQMBkOB17BAIByBl2NWiE4bBu/3i4i41t0DcXCMCE4DEwt3NTQ3RwZ+DoKEQ0UE\rQBEHDBIBfowWa1JUOQAREDcSURN2mU5gbV00RwukB6abDQyqM0cCrqZ6DWC0BLa4eIWFDKOSuUGOUzMQxLfGa09unMvNuAhschAF\rn6ERi8bXQxEIRhQ8lFEI268IoA1iDRQPcYl/A+sWAweViSQlJWYGPIDzakCFBw8UTFjIcEKBhw0KSHghKoLFixgvGpDwykIIADs\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Binary, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTNbW1rW1tZmZmf///2ZmZszMzO/v76WlpWZmZnp6er29vebm5ltbW62trYWFhff398XFxd3d3XNzc1BQ\rUIyMjP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXzoLAsQumcyIAIAWO970LMNAEdgeoY\rLiwfCgOh0FAwcioEDyYgDAAGgYLQiOQiyaWlOTQMBkOB17BAIByBl2NWiE4bBu/3i4i41t0DcXCMCE4DEwt3NTQ3RwZ+DoKEQ0UE\rQBEHDBIBfowWa1JUOQAREDcSURN2mU5gbV00RwukB6abDQyqM0cCrqZ6DWC0BLa4eIWFDKOSuUGOUzMQxLfGa09unMvNuAhschAF\rn6ERi8bXQxEIRhQ8lFEI268IoA1iDRQPcYl/A+sWAweViSQlJWYGPIDzakCFBw8UTFjIcEKBhw0KSHghKoLFixgvGpDwykIIADs\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Compressed, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAGYAAMzMzKWlpXJycrQpKWZmZpmZmd7e3p8bG+1BQbu2tq9zc7Q+Pm02Nubm5rW1tcwzM34SEsVKStbW1qsr\rK8mIiH19ffJRUe/v78deXsTExKysrMyGhokfH2ZmZn4HB+I1NYWFhbqHh4RbW7ExMeZcXIwXF/1aWpkmJsyZmbhWVrGmpq03N729\rvYN0dNNAQO9KSrVNTetbW78jI4yMjIMWFpmZma0xMZkiItR/f+U7O5gPD7Krq4gnJ3MAAIUMDPZWVr9ISL8uLvRERIYREc5HR8uP\rj8mAgKYpKf///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAEkALAAAAAAUABYAAAf/gEmCBxsPGwIBDoKLjIwTGxgBBgItBxiNmBMCDgcGkwqW\rmI6bEwYanweii6UHkgEtApSKqqylnp4CE6pJkgcTrwoKGwMal40SDqcHvr8aLQMtDjnGSRg3QQo0y9uv0EY4Bw6XDiwkJCEBE+EO\rE89GMSYB4UkHLEAEFAryGBjtCypFPmiYoOjAjRMwCCBYoa5VhQwlIPh4sG/CwSEgdvzgoY5DDBkXJG7QYMkiEB0zPkTgOOEIgxcJ\rJAoY2O/GBQI+esycMEGDCBJChPjYieEAEhIfGgiguCzAhhEoiPgYaekAjg4uBjwY6MBBgAcFDNTw0WIfOQUCiMnr+rXASBTpMRRh\rYPfAQjqeATRsKFBJnThBczXYfWVIgIECAeb+dRTCgoUBAwpIHpBqFzOemCs3CgQAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Compressed, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAGYAAMzMzKWlpXJycrQpKWZmZpmZmd7e3p8bG+1BQbu2tq9zc7Q+Pm02Nubm5rW1tcwzM34SEsVKStbW1qsr\rK8mIiH19ffJRUe/v78deXsTExKysrMyGhokfH2ZmZn4HB+I1NYWFhbqHh4RbW7ExMeZcXIwXF/1aWpkmJsyZmbhWVrGmpq03N729\rvYN0dNNAQO9KSrVNTetbW78jI4yMjIMWFpmZma0xMZkiItR/f+U7O5gPD7Krq4gnJ3MAAIUMDPZWVr9ISL8uLvRERIYREc5HR8uP\rj8mAgKYpKf///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAEkALAAAAAAUABYAAAf/gEmCBxsPGwIBDoKLjIwTGxgBBgItBxiNmBMCDgcGkwqW\rmI6bEwYanweii6UHkgEtApSKqqylnp4CE6pJkgcTrwoKGwMal40SDqcHvr8aLQMtDjnGSRg3QQo0y9uv0EY4Bw6XDiwkJCEBE+EO\rE89GMSYB4UkHLEAEFAryGBjtCypFPmiYoOjAjRMwCCBYoa5VhQwlIPh4sG/CwSEgdvzgoY5DDBkXJG7QYMkiEB0zPkTgOOEIgxcJ\rJAoY2O/GBQI+esycMEGDCBJChPjYieEAEhIfGgiguCzAhhEoiPgYaekAjg4uBjwY6MBBgAcFDNTw0WIfOQUCiMnr+rXASBTpMRRh\rYPfAQjqeATRsKFBJnThBczXYfWVIgIECAeb+dRTCgoUBAwpIHpBqFzOemCs3CgQAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_CSS, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1om2tn2np5mZmcz/Zv///3p6eszMzMxmZu/v7729vbW1tWaZmebm5q2traWlpZnMzHNzc2ZmZoWF\rhff3993d3cTExJjExIyMjGZmZo28vKXR0f///wAAAAAAACH5BAUUAB0ALAAAAAAUABYAAAXcILMsTPmcEAExgdO972LMtFEpgfog\rLizXM4Ujp4LwYIzZg4EiDAmX4rGTNDAKBQ4mY0EQEAsI5BF4PZRZjIDi8BLequPZ8NBuBofhZXEiSBYucxBqAw0SQgEIew9/gTME\rGRQHEhI3DhYBFwyNHXNAMxU3XZsXjgZwqHBDCxIICp2fn6utr3OpqbOusLE1bZu6cwkJp7e+tLu8NsbAM8LEqRYXjLoQNqEKQg7a\rl2AQE9TXlwGJCOWLBN+vBAqYiiMlJikUALqQFJKU+ZQT/AATFi+6lBtIsKCFVx1CAAA7", Scope = Protected
+	#tag Constant, Name = kImageBase64_CSS, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1om2tn2np5mZmcz/Zv///3p6eszMzMxmZu/v7729vbW1tWaZmebm5q2traWlpZnMzHNzc2ZmZoWF\rhff3993d3cTExJjExIyMjGZmZo28vKXR0f///wAAAAAAACH5BAUUAB0ALAAAAAAUABYAAAXcILMsTPmcEAExgdO972LMtFEpgfog\rLizXM4Ujp4LwYIzZg4EiDAmX4rGTNDAKBQ4mY0EQEAsI5BF4PZRZjIDi8BLequPZ8NBuBofhZXEiSBYucxBqAw0SQgEIew9/gTME\rGRQHEhI3DhYBFwyNHXNAMxU3XZsXjgZwqHBDCxIICp2fn6utr3OpqbOusLE1bZu6cwkJp7e+tLu8NsbAM8LEqRYXjLoQNqEKQg7a\rl2AQE9TXlwGJCOWLBN+vBAqYiiMlJikUALqQFJKU+ZQT/AATFi+6lBtIsKCFVx1CAAA7", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Folder, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAFw+H/HDlMOkhbaSbZh6W8LCwqKioubm5n9lS5mZmf/evf/Tpt+zhr29vbGLZL2betfX17e3t3JMJ6CAYO/K\rpue6jfnWssWyoKV5TNesgZdrP7+UaWdEIv/Mmc6lfO/v797e3uG1iXxTKr+Zc4R6b6N2SszMzLKLZPXFla2DWo1xVf/Wre3Ak//b\rttW0lKurq//hw/jLn/3RpZRzUltDLMOZbrWPaal+UdG1mYRYLOXCnfXIm8mrjKuHY7SUc9uwheW4jK+Macaed6h8UWNCIf/ZtLyW\rcWtIJOy9jsSddqWEY3NSKf/jx5p7XLqPY5VvSMWljIBmTPHPrNa1nPLHnP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAFUALAAAAAAUABYAAAf/gFWCg4SFhoeIiB+Li4mDHwcgIBCUkgcHH4cHOEY2Dik3\roUYmECCXjYI4PFJFRSsrCxUlPQ0FpKWXVQMUKzK+MTssNU9GAycpGEMXpiM6VCwsQCE/Hj48LgquVBsaJiAPUA8PAzblIwIuFq4y\rAT85ESYPTPMK9fbZvTtAHiIvBUYwAipo0aogrB0VMiQRYaDAAHstWryauCAGkgxCBkhI0MDGQImwFoisGICBhxFBNjZwEPHVrxgw\rUSTM2ENlClf5UKCAhgSJSZRKjnBMAQsYiwohpv3I4CGjkiYcOA6RESNABQZMPTQVUqxHExVEOJZ4FoJpkhFG0g4I8lQFAgANQDE4\rYTpibZAeeJVMIKAiCg0a/i5oyCFChITDRxIn5sABAA0S8ECYiPDCQILLmDMbeBE5kokCBRqIHk0atLcDgQAAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Folder, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAFw+H/HDlMOkhbaSbZh6W8LCwqKioubm5n9lS5mZmf/evf/Tpt+zhr29vbGLZL2betfX17e3t3JMJ6CAYO/K\rpue6jfnWssWyoKV5TNesgZdrP7+UaWdEIv/Mmc6lfO/v797e3uG1iXxTKr+Zc4R6b6N2SszMzLKLZPXFla2DWo1xVf/Wre3Ak//b\rttW0lKurq//hw/jLn/3RpZRzUltDLMOZbrWPaal+UdG1mYRYLOXCnfXIm8mrjKuHY7SUc9uwheW4jK+Macaed6h8UWNCIf/ZtLyW\rcWtIJOy9jsSddqWEY3NSKf/jx5p7XLqPY5VvSMWljIBmTPHPrNa1nPLHnP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAFUALAAAAAAUABYAAAf/gFWCg4SFhoeIiB+Li4mDHwcgIBCUkgcHH4cHOEY2Dik3\roUYmECCXjYI4PFJFRSsrCxUlPQ0FpKWXVQMUKzK+MTssNU9GAycpGEMXpiM6VCwsQCE/Hj48LgquVBsaJiAPUA8PAzblIwIuFq4y\rAT85ESYPTPMK9fbZvTtAHiIvBUYwAipo0aogrB0VMiQRYaDAAHstWryauCAGkgxCBkhI0MDGQImwFoisGICBhxFBNjZwEPHVrxgw\rUSTM2ENlClf5UKCAhgSJSZRKjnBMAQsYiwohpv3I4CGjkiYcOA6RESNABQZMPTQVUqxHExVEOJZ4FoJpkhFG0g4I8lQFAgANQDE4\rYTpibZAeeJVMIKAiCg0a/i5oyCFChITDRxIn5sABAA0S8ECYiPDCQILLmDMbeBE5kokCBRqIHk0atLcDgQAAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Font, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAPeGAP////v7+/39/fHx8a+vr+7u7vX19fj4+O/v7/b29vn5+f7+/vr6+vDw8PT09KioqPPz8/z8/Pf39+3t7fLy\r8qmpqaqqqq6urkNDQ7YoKOzs7EJCQqCgoOrq6qenp6Ojo7CwsKGhoaGhoKGgoLa2tunp6VtbW+fn562trT09PYQTE6CgoZ6fnrYp\rKaCfn89dXY0VFdVjYxISEo5hYVJSUqampZiGhqysrHp8fObm5oKDg5+gn46Ojt2FhbAnJ/Pw8KkhIcVYWLskJOGJiaurqxsbGxMT\rExAUFFBQUKemp4gUFNONjZQ1Ne3HxxATE5MXF+Xl5e6ZmfPp6aOhoOa3t1hYWI+SkvDq6ujo6EpKSo2QkCEhIaKiobUoKNiAgKSk\ro6GioRkcHJ+foKipqY8yMk9PT6GgnxMWFiIiIpA0NBcXF6ampqOhoZoZGd2EhMJYWNJgYNOBgaWlpN2Dg7cuLogrK52dnePj4ycn\rJ1VVVbxfX2JiYstxcblGRstaWtyCguTk5KMdHchZWYIqKuvr66WkpQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0w\rTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUg\rWE1QIENvcmUgNS4wLWMwNjAgNjEuMTM0Nzc3LCAyMDEwLzAyLzEyLTE3OjMyOjAwICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpy\rZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91\rdD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUu\rY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVm\rIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6\rQkU3NzA4Q0EwOEExMTFFMUFENDY4QzgxQTI5RTI4MjciIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QkU3NzA4Q0IwOEExMTFF\rMUFENDY4QzgxQTI5RTI4MjciPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpCRTc3MDhDODA4\rQTExMUUxQUQ0NjhDODFBMjlFMjgyNyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpCRTc3MDhDOTA4QTExMUUxQUQ0NjhDODFB\rMjlFMjgyNyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH/\r/v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0\rs7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2pp\raGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8e\rHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAEAAIYALAAAAAAUABYAAAj/AA2BIEDgAkGCFwwWPAgChCFDBBYoYMAg\rQAQBCzJGYHDAAAUGFx5eABDAIkYAKFEuEMBAAgAUD1EAODCx5EUBKgUEUADgxkMiADAIFbqh6IacAQBYeGgBQAoSDkzg4eGARAqc\rKHGOeVgBgJ0EB0xssVKSgwCsKB88fADAQIIEVcLYqGgyI0oPawE4cJvnDJMMgDN0ydCCDoAaeSE4cEDDSZooB4b4iBGgiRAAch56\rEDBgAAUkR2ZISdADCJyJVAB8WRuhQecyRrTsdRPoBU0GALisDYDAdRYZOhTPaePnAE0AU3YjKLGniBo0OBz8eSIogQSeYrgyKFCg\rd2cKELzAegjy9gAADlwVTOju3XMcJW/cunTB9ICG9d1dD+Cjos8PtwDswJQEGtzHXW9LkFHHIHpcYQAALKSHX2+ugaeYAQa4JIKE\rBzZQIQQXZgjAhoZYgMAdgECRwwknYFFCBzASct8BITD1QAUeJLFGIR/0OAIYI5jBxgohoBcQADs\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Font, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAPeGAP////v7+/39/fHx8a+vr+7u7vX19fj4+O/v7/b29vn5+f7+/vr6+vDw8PT09KioqPPz8/z8/Pf39+3t7fLy\r8qmpqaqqqq6urkNDQ7YoKOzs7EJCQqCgoOrq6qenp6Ojo7CwsKGhoaGhoKGgoLa2tunp6VtbW+fn562trT09PYQTE6CgoZ6fnrYp\rKaCfn89dXY0VFdVjYxISEo5hYVJSUqampZiGhqysrHp8fObm5oKDg5+gn46Ojt2FhbAnJ/Pw8KkhIcVYWLskJOGJiaurqxsbGxMT\rExAUFFBQUKemp4gUFNONjZQ1Ne3HxxATE5MXF+Xl5e6ZmfPp6aOhoOa3t1hYWI+SkvDq6ujo6EpKSo2QkCEhIaKiobUoKNiAgKSk\ro6GioRkcHJ+foKipqY8yMk9PT6GgnxMWFiIiIpA0NBcXF6ampqOhoZoZGd2EhMJYWNJgYNOBgaWlpN2Dg7cuLogrK52dnePj4ycn\rJ1VVVbxfX2JiYstxcblGRstaWtyCguTk5KMdHchZWYIqKuvr66WkpQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0w\rTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUg\rWE1QIENvcmUgNS4wLWMwNjAgNjEuMTM0Nzc3LCAyMDEwLzAyLzEyLTE3OjMyOjAwICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpy\rZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91\rdD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUu\rY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVm\rIyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6\rQkU3NzA4Q0EwOEExMTFFMUFENDY4QzgxQTI5RTI4MjciIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QkU3NzA4Q0IwOEExMTFF\rMUFENDY4QzgxQTI5RTI4MjciPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpCRTc3MDhDODA4\rQTExMUUxQUQ0NjhDODFBMjlFMjgyNyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpCRTc3MDhDOTA4QTExMUUxQUQ0NjhDODFB\rMjlFMjgyNyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH/\r/v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0\rs7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2pp\raGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8e\rHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAEAAIYALAAAAAAUABYAAAj/AA2BIEDgAkGCFwwWPAgChCFDBBYoYMAg\rQAQBCzJGYHDAAAUGFx5eABDAIkYAKFEuEMBAAgAUD1EAODCx5EUBKgUEUADgxkMiADAIFbqh6IacAQBYeGgBQAoSDkzg4eGARAqc\rKHGOeVgBgJ0EB0xssVKSgwCsKB88fADAQIIEVcLYqGgyI0oPawE4cJvnDJMMgDN0ydCCDoAaeSE4cEDDSZooB4b4iBGgiRAAch56\rEDBgAAUkR2ZISdADCJyJVAB8WRuhQecyRrTsdRPoBU0GALisDYDAdRYZOhTPaePnAE0AU3YjKLGniBo0OBz8eSIogQSeYrgyKFCg\rd2cKELzAegjy9gAADlwVTOju3XMcJW/cunTB9ICG9d1dD+Cjos8PtwDswJQEGtzHXW9LkFHHIHpcYQAALKSHX2+ugaeYAQa4JIKE\rBzZQIQQXZgjAhoZYgMAdgECRwwknYFFCBzASct8BITD1QAUeJLFGIR/0OAIYI5jBxgohoBcQADs\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_HTML, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1om2tn2np5mZmcz/Zv///3p6eszMzMxmZu/v7729vbW1tWaZmebm5q2traWlpZnMzHNzc2ZmZoWF\rhff3993d3cTExJjExIyMjGZmZo28vKXR0f///wAAAAAAACH5BAUUAB0ALAAAAAAUABYAAAXcILMsTPmcEAExgdO972LMtFEpgfog\rLizXM4Ujp4LwYIzZg4EiDAmX4rGTNDAKBQ4mY0EQEAsI5BF4PZRZjIDi8BLequPZ8NBuBofhZXEiSBYucxBqAw0SQgEIew9/gTME\rGRQHEhI3DhYBFwyNHXNAMxU3XZsXjgZwqHBDCxIICp2fn6utr3OpqbOusLE1bZu6cwkJp7e+tLu8NsbAM8LEqRYXjLoQNqEKQg7a\rl2AQE9TXlwGJCOWLBN+vBAqYiiMlJikUALqQFJKU+ZQT/AATFi+6lBtIsKCFVx1CAAA7", Scope = Protected
+	#tag Constant, Name = kImageBase64_HTML, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1om2tn2np5mZmcz/Zv///3p6eszMzMxmZu/v7729vbW1tWaZmebm5q2traWlpZnMzHNzc2ZmZoWF\rhff3993d3cTExJjExIyMjGZmZo28vKXR0f///wAAAAAAACH5BAUUAB0ALAAAAAAUABYAAAXcILMsTPmcEAExgdO972LMtFEpgfog\rLizXM4Ujp4LwYIzZg4EiDAmX4rGTNDAKBQ4mY0EQEAsI5BF4PZRZjIDi8BLequPZ8NBuBofhZXEiSBYucxBqAw0SQgEIew9/gTME\rGRQHEhI3DhYBFwyNHXNAMxU3XZsXjgZwqHBDCxIICp2fn6utr3OpqbOusLE1bZu6cwkJp7e+tLu8NsbAM8LEqRYXjLoQNqEKQg7a\rl2AQE9TXlwGJCOWLBN+vBAqYiiMlJikUALqQFJKU+ZQT/AATFi+6lBtIsKCFVx1CAAA7", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Image, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAAB0J6u+sr4mJoWFha2trQBrjlpaWubm5jOKUHt7eyaoUfpGRhSUvtbW1p+ypff391NTU1G53PcxMQecOWZm\rZsTExIygkuUxMTClzQZ8pACLL0ehZYOhrL5JQv9aWnJycrW1tW6LWxiYQu/v73+pt93d3Uqz1oyMjP///8zMzNYrKzKLbDGtWgBx\rlgCZM/pCQhSJsJK2wxqjSGZmZpmZmaWlpb29vf9mZiOSt/9RUZmZmQCCK1SvbO47OwB1nPY5Oc4pKeEuLjqwYT2lyAyBqIypswCZ\rM/w6Ou0zMwB9KpCjlhagRCOXvgR4nimtUv9NTR+lTP5FRTaMU8lLRHCKWt4pKROMtVKrcD2nygiErf///wAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAFoALAAAAAAUABYAAAf/gCA2NiCFBIc1NDUgDQdaj482KCgPlZUjIw2KBCmOkCCW\rmJgHJSk0ijWdnw8jpCWvDSkVNDaoqloEIze7Hk8vP4MnFTY1NQQNjzUHvDlRPUiHJ6enNRWONSUeHlFHP0EqqMWJHzbXJTk5RxIX\rQALSh4bk5k8LSEhTISwKG0qFIATytGB70UNFBx5CFEBZIsJCoRoUygks8YMdFSEyJmjUgIAACYjWBB5oQEzfBBcodwDgwIRGxGut\rUoBQeNKFBgArsFg5YQCEIwKsSlS4smSCBg1JVpjAkSFBzxK4Ko0MIEKDyhURMBDx8QECAagEJj0Y6UAKThMYGDRp0fUrLrExVUEU\rGYKDSJMCBdpCrQH3QIoYTGBk8NGiAFuve6WWaFABRKITAxJI7upTC40Ri1MQIvB4QOQEXUPSgBz5g2kKqCkYWA2BQoMRWkpVmE17\r2KDbFRo9CgQAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Image, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAOYAAAB0J6u+sr4mJoWFha2trQBrjlpaWubm5jOKUHt7eyaoUfpGRhSUvtbW1p+ypff391NTU1G53PcxMQecOWZm\rZsTExIygkuUxMTClzQZ8pACLL0ehZYOhrL5JQv9aWnJycrW1tW6LWxiYQu/v73+pt93d3Uqz1oyMjP///8zMzNYrKzKLbDGtWgBx\rlgCZM/pCQhSJsJK2wxqjSGZmZpmZmaWlpb29vf9mZiOSt/9RUZmZmQCCK1SvbO47OwB1nPY5Oc4pKeEuLjqwYT2lyAyBqIypswCZ\rM/w6Ou0zMwB9KpCjlhagRCOXvgR4nimtUv9NTR+lTP5FRTaMU8lLRHCKWt4pKROMtVKrcD2nygiErf///wAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUAFoALAAAAAAUABYAAAf/gCA2NiCFBIc1NDUgDQdaj482KCgPlZUjIw2KBCmOkCCW\rmJgHJSk0ijWdnw8jpCWvDSkVNDaoqloEIze7Hk8vP4MnFTY1NQQNjzUHvDlRPUiHJ6enNRWONSUeHlFHP0EqqMWJHzbXJTk5RxIX\rQALSh4bk5k8LSEhTISwKG0qFIATytGB70UNFBx5CFEBZIsJCoRoUygks8YMdFSEyJmjUgIAACYjWBB5oQEzfBBcodwDgwIRGxGut\rUoBQeNKFBgArsFg5YQCEIwKsSlS4smSCBg1JVpjAkSFBzxK4Ko0MIEKDyhURMBDx8QECAagEJj0Y6UAKThMYGDRp0fUrLrExVUEU\rGYKDSJMCBdpCrQH3QIoYTGBk8NGiAFuve6WWaFABRKITAxJI7upTC40Ri1MQIvB4QOQEXUPSgBz5g2kKqCkYWA2BQoMRWkpVmE17\r2KDbFRo9CgQAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Movie, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFRUVMTExK6urmZmZtbW1ubm5mZmZnt7e729vczMzN7e3lpaWu7u7oSEhLW1tXNzc4yMjP///wAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABEALAAAAAAUABYAAAXQ4NGMx2Oe6DMoRXQQSTMsdL0MDxIM\rhMIcpYfDgdAFAkXTLEEoDJALYiDBpO6Gi0DziQAQmT0CbIDVFlQ0Xa/AKCgI6AViW5QnWIxIWzFAOABzTlBqeG4EfV1mQUIIYG8w\rBzNZdA4NiycDmQICgJQyNjYDm50FQCqbRDpFDnGBfQ4LAg5HVUeinK5IXo1ijwlkf2atWoVvcWaIdnh6bq+kyYRshs6BpoyOYgkl\rAwDCSJcomUPdW0qgNQAAmQBMhglIRUfyRTpMPoYwVFT5+r0tIQA7", Scope = Protected
+	#tag Constant, Name = kImageBase64_Movie, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFRUVMTExK6urmZmZtbW1ubm5mZmZnt7e729vczMzN7e3lpaWu7u7oSEhLW1tXNzc4yMjP///wAAAAAAAAAA\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABEALAAAAAAUABYAAAXQ4NGMx2Oe6DMoRXQQSTMsdL0MDxIM\rhMIcpYfDgdAFAkXTLEEoDJALYiDBpO6Gi0DziQAQmT0CbIDVFlQ0Xa/AKCgI6AViW5QnWIxIWzFAOABzTlBqeG4EfV1mQUIIYG8w\rBzNZdA4NiycDmQICgJQyNjYDm50FQCqbRDpFDnGBfQ4LAg5HVUeinK5IXo1ijwlkf2atWoVvcWaIdnh6bq+kyYRshs6BpoyOYgkl\rAwDCSJcomUPdW0qgNQAAmQBMhglIRUfyRTpMPoYwVFT5+r0tIQA7", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Music, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAACEhIczMzJmZmXd3d1lZWd7e3kFBQb29vbW1tebm5oyMjDMzM9bW1qOjo+/v72ZmZoWFhVNTU8XFxZmZma2t\rrSgoKHx8fElJSf///wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABgALAAAAAAUABYAAAXgICaOJOmcTqmKTlIEQlQkK+sylDIQ\rSzCvroNAoYDsFgcGrcRoKARDC8FQWSB8JccDKoDwAICFFUtKPBSPyKJKEDTGhVIhXY0oGg0KYiFRmuZneHoHBxI9PyMtDxKEhQGP\rAQsMiCNmkAGTDJqSlCJmmpMFLweRPks2D6GiChYPPH2nLXOqEEQWF3CeDKQPmAUMDxBpYldxCayui5gMERG4YcUOtawXD6SaFmsV\rBBRJCWbCag9XmRIKCAikBS3Nz+Omv5CTNAnZFdvdSiffogkpGC7MoVP3j4WKBAzkrasxIgQAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Music, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAACEhIczMzJmZmXd3d1lZWd7e3kFBQb29vbW1tebm5oyMjDMzM9bW1qOjo+/v72ZmZoWFhVNTU8XFxZmZma2t\rrSgoKHx8fElJSf///wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABgALAAAAAAUABYAAAXgICaOJOmcTqmKTlIEQlQkK+sylDIQ\rSzCvroNAoYDsFgcGrcRoKARDC8FQWSB8JccDKoDwAICFFUtKPBSPyKJKEDTGhVIhXY0oGg0KYiFRmuZneHoHBxI9PyMtDxKEhQGP\rAQsMiCNmkAGTDJqSlCJmmpMFLweRPks2D6GiChYPPH2nLXOqEEQWF3CeDKQPmAUMDxBpYldxCayui5gMERG4YcUOtawXD6SaFmsV\rBBRJCWbCag9XmRIKCAikBS3Nz+Omv5CTNAnZFdvdSiffogkpGC7MoVP3j4WKBAzkrasxIgQAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_PDF, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAADMzM9bW1rW1tZmZmf///2ZmZszMzO/v72ZmZqWlpVlZWXl5eebm5r29vUxMTK2trd3d3ff398TExHNzc0BA\rQISEhIyMjFJSUv///wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABgALAAAAAAUABYAAAXqoNA0QvmcyZAIAYO9b0PMNBEdgfoY\rLizXswMjp0rwYIKZoMBkSnKS4hGTJDAMlYpBITAMDI1E4hF4PWqNCYHrHbhVxzONAShQhhLBaTBpuOQ0XgFCAQZ5D31/Sk1MgwwQ\rAXmJGHIDWgZbBhE3EAYCExKKBG40CgFzAWkGB5RKDl0DFDVDn6utMwMFABOnqLWsgECznhO2ckuMvRFXv7dXmQoGM8vEtglABREF\rmpwSiNY2mwcVDAV+j54J26wJ4o8BhZiGerm2AweQhiQlJWKW0awGWMiyYMGEgwibKCgA4UUneRAjYoLACkMIADs\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_PDF, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAADMzM9bW1rW1tZmZmf///2ZmZszMzO/v72ZmZqWlpVlZWXl5eebm5r29vUxMTK2trd3d3ff398TExHNzc0BA\rQISEhIyMjFJSUv///wAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABgALAAAAAAUABYAAAXqoNA0QvmcyZAIAYO9b0PMNBEdgfoY\rLizXswMjp0rwYIKZoMBkSnKS4hGTJDAMlYpBITAMDI1E4hF4PWqNCYHrHbhVxzONAShQhhLBaTBpuOQ0XgFCAQZ5D31/Sk1MgwwQ\rAXmJGHIDWgZbBhE3EAYCExKKBG40CgFzAWkGB5RKDl0DFDVDn6utMwMFABOnqLWsgECznhO2ckuMvRFXv7dXmQoGM8vEtglABREF\rmpwSiNY2mwcVDAV+j54J26wJ4o8BhZiGerm2AweQhiQlJWKW0awGWMiyYMGEgwibKCgA4UUneRAjYoLACkMIADs\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Text, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTN3d3bW1tZmZmWZmZv///8zMzHl5ee/v762trb29vWZmZoyMjKWlpdbW1ubm5vf391paWsPDw3Nzc4WF\rhVRUVP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXdoKAoQpmczdAIzmO9r1LMdAEhjpoY\rLizXM8Qjp2rwYAJg8GEYSIpHS3KmYBwIhMhkYFA0GgnHK0HDmiOVgVptdJFnh51DcYgAAIzEYKJwK20SEWgMAgl8fn8CWREKEgKH\rFm81EIpYAwEGjxKINAlmDAYFQwoTBgiRQAxYU6KZpaeSM6oErEyPpqh/NbavuWVYDDMQvLixBZ/CxLBKEM3NCAEShrgNNs9CD9kP\rmAINBNTP2w4OBuUGjnrfpwPQ5BIkJSYpFBG4AwwUB/oT/P1nBAFeYDJHsGC5AKcshAAAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Text, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTN3d3bW1tZmZmWZmZv///8zMzHl5ee/v762trb29vWZmZoyMjKWlpdbW1ubm5vf391paWsPDw3Nzc4WF\rhVRUVP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXdoKAoQpmczdAIzmO9r1LMdAEhjpoY\rLizXM8Qjp2rwYAJg8GEYSIpHS3KmYBwIhMhkYFA0GgnHK0HDmiOVgVptdJFnh51DcYgAAIzEYKJwK20SEWgMAgl8fn8CWREKEgKH\rFm81EIpYAwEGjxKINAlmDAYFQwoTBgiRQAxYU6KZpaeSM6oErEyPpqh/NbavuWVYDDMQvLixBZ/CxLBKEM3NCAEShrgNNs9CD9kP\rmAINBNTP2w4OBuUGjnrfpwPQ5BIkJSYpFBG4AwwUB/oT/P1nBAFeYDJHsGC5AKcshAAAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_Unknown, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTN3d3bW1tZmZmWZmZv///8zMzHl5ee/v762trb29vWZmZoyMjKWlpdbW1ubm5vf391paWsPDw3Nzc4WF\rhVRUVP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXdoKAoQpmczdAIzmO9r1LMdAEhjpoY\rLizXM8Qjp2rwYAJg8GEYSIpHS3KmYBwIhMhkYFA0GgnHK0HDmiOVgVptdJFnh51DcYgAAIzEYKJwK20SEWgMAgl8fn8CWREKEgKH\rFm81EIpYAwEGjxKINAlmDAYFQwoTBgiRQAxYU6KZpaeSM6oErEyPpqh/NbavuWVYDDMQvLixBZ/CxLBKEM3NCAEShrgNNs9CD9kP\rmAINBNTP2w4OBuUGjnrfpwPQ5BIkJSYpFBG4AwwUB/oT/P1nBAFeYDJHsGC5AKcshAAAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_Unknown, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAExMTN3d3bW1tZmZmWZmZv///8zMzHl5ee/v762trb29vWZmZoyMjKWlpdbW1ubm5vf391paWsPDw3Nzc4WF\rhVRUVP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABYALAAAAAAUABYAAAXdoKAoQpmczdAIzmO9r1LMdAEhjpoY\rLizXM8Qjp2rwYAJg8GEYSIpHS3KmYBwIhMhkYFA0GgnHK0HDmiOVgVptdJFnh51DcYgAAIzEYKJwK20SEWgMAgl8fn8CWREKEgKH\rFm81EIpYAwEGjxKINAlmDAYFQwoTBgiRQAxYU6KZpaeSM6oErEyPpqh/NbavuWVYDDMQvLixBZ/CxLBKEM3NCAEShrgNNs9CD9kP\rmAINBNTP2w4OBuUGjnrfpwPQ5BIkJSYpFBG4AwwUB/oT/P1nBAFeYDJHsGC5AKcshAAAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_WAV, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWANUAAENDQ8XFxZmZmaMbG3t7e7pycrqdnd7e3rlcXL29vVlZWbW1taxDQ+bm5rONjdHBwdbQ0KWlpd+0tO/v74uL\ri2ZmZqiCgqUzM9WcnFJSUrthYfDi4tCNjcyFheLQ0K6urszMzLZLS8yZmcaBgeW9vd+wsElJSfHk5JmZmb17e6YrK2ZmZrE7O71r\ra4SEhMynp3R0dOPS0tbW1syZmblRUfXl5aEiIrNAQLiSkvfv771aWsR6esNpaffe3urR0f///yH5BAUUAD8ALAAAAAAUABYAAAb9\rwJ9wSCwaj8jkcDIRNCacjVLYOERghwZnUEtOqgtBBSRrYELS4vcASSQWGYfhMOnwiGtIIAEBCUwWFyJMOiRUCRGJCQcHCxQmEQYq\rMT8lOkILAQ2bVX4ukAkpLUIsXQJZnDJhnwJ8Nyc/GoanjDIyAREUrAkyGhI/Oxg/FAe3bx8CuiatMjscPx3PLgEBC4kRybsyI8I8\rwrqJAgLYyswIvzSGIAQKChkV4wK7D2g/A0IHIAnIMArjuwUK/MBw6UcVPQs+uKjgwgWACDgYeKhxw5CQPHvEZADwwcaLCTvuqDkY\r4MPGBCAOnPHSQAaIADDIvGDgY0qVYqgmTLn45QPJkSAAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_WAV, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWANUAAENDQ8XFxZmZmaMbG3t7e7pycrqdnd7e3rlcXL29vVlZWbW1taxDQ+bm5rONjdHBwdbQ0KWlpd+0tO/v74uL\ri2ZmZqiCgqUzM9WcnFJSUrthYfDi4tCNjcyFheLQ0K6urszMzLZLS8yZmcaBgeW9vd+wsElJSfHk5JmZmb17e6YrK2ZmZrE7O71r\ra4SEhMynp3R0dOPS0tbW1syZmblRUfXl5aEiIrNAQLiSkvfv771aWsR6esNpaffe3urR0f///yH5BAUUAD8ALAAAAAAUABYAAAb9\rwJ9wSCwaj8jkcDIRNCacjVLYOERghwZnUEtOqgtBBSRrYELS4vcASSQWGYfhMOnwiGtIIAEBCUwWFyJMOiRUCRGJCQcHCxQmEQYq\rMT8lOkILAQ2bVX4ukAkpLUIsXQJZnDJhnwJ8Nyc/GoanjDIyAREUrAkyGhI/Oxg/FAe3bx8CuiatMjscPx3PLgEBC4kRybsyI8I8\rwrqJAgLYyswIvzSGIAQKChkV4wK7D2g/A0IHIAnIMArjuwUK/MBw6UcVPQs+uKjgwgWACDgYeKhxw5CQPHvEZADwwcaLCTvuqDkY\r4MPGBCAOnPHSQAaIADDIvGDgY0qVYqgmTLn45QPJkSAAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kImageBase64_XML, Type = String, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1q2trZmZmf///8TExO/v73Nzc+bm5rW1tXl5eaWlpb29vWZmZszMzPf3993d3YWFhWZmZoyMjP//\r/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABQALAAAAAAUABYAAAXFYMIwSSmcy7AkAUK9L0PMNPEYgSo4\rLizXMwMip1rwYAlgcDgoFI+UJGFArUIcAwdjsRAEXgIlQYitqgqu8NQ8GBYSp8GBkRbfho63YF5fs6sBb3wUanY3VwkHaIQzf2ZD\rDIoGjGI1Q4kFk2qOVZeSlJUzCA6YmkCOo6WglQ+je5mrfmYQBa+TCzYPN0IIvQiICw2wC7pCEAEBDsp5cAPCkwMGx3kkJSYpEQAO\r0BMREQoH4eIHDeUADRAvVwXs7e7tDhCTFCEAOw\x3D\x3D", Scope = Protected
+	#tag Constant, Name = kImageBase64_XML, Type = Text, Dynamic = False, Default = \"R0lGODlhFAAWAMQAAFxcXNbW1q2trZmZmf///8TExO/v73Nzc+bm5rW1tXl5eaWlpb29vWZmZszMzPf3993d3YWFhWZmZoyMjP//\r/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAUUABQALAAAAAAUABYAAAXFYMIwSSmcy7AkAUK9L0PMNPEYgSo4\rLizXMwMip1rwYAlgcDgoFI+UJGFArUIcAwdjsRAEXgIlQYitqgqu8NQ8GBYSp8GBkRbfho63YF5fs6sBb3wUanY3VwkHaIQzf2ZD\rDIoGjGI1Q4kFk2qOVZeSlJUzCA6YmkCOo6WglQ+je5mrfmYQBa+TCzYPN0IIvQiICw2wC7pCEAEBDsp5cAPCkwMGx3kkJSYpEQAO\r0BMREQoH4eIHDeUADRAvVwXs7e7tDhCTFCEAOw\x3D\x3D", Scope = Protected
 	#tag EndConstant
 
 	#tag Constant, Name = kMethodConnect, Type = String, Dynamic = False, Default = \"CONNECT", Scope = Protected
@@ -3226,13 +3361,13 @@ Protected Module MyHTTPServerModule
 	#tag Constant, Name = kStatusUseProxy, Type = Double, Dynamic = False, Default = \"305", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = kVersion, Type = String, Dynamic = False, Default = \"HTTP/1.1", Scope = Protected
+	#tag Constant, Name = kVersion, Type = Text, Dynamic = False, Default = \"HTTP/1.1", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = VersionLongString, Type = String, Dynamic = False, Default = \"Kanjo HTTP Server 0.1", Scope = Protected
+	#tag Constant, Name = VersionLongString, Type = Text, Dynamic = False, Default = \"Kanjo HTTP Server 0.3", Scope = Protected
 	#tag EndConstant
 
-	#tag Constant, Name = VersionShortString, Type = String, Dynamic = False, Default = \"0.1", Scope = Protected
+	#tag Constant, Name = VersionShortString, Type = Text, Dynamic = False, Default = \"0.1", Scope = Protected
 	#tag EndConstant
 
 

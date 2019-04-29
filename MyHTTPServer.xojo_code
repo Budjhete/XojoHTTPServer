@@ -141,6 +141,14 @@ Inherits TCPSocket
 		      
 		      Me.Context.Headers.Value(MyHTTPServerModule.kHeaderServer) = MyHTTPServerModule.VersionLongString
 		      
+		      
+		      // send the size of the data on the first bite
+		      dim ttt as text = Me.Context.Headers.Value(MyHTTPServerModule.kheadercontentlength).IntegerValue.ToHex(8)
+		      dim t1 as text = text.FromUnicodeCodepoint(Integer.FromHex(ttt.Mid(0, 2)))
+		      dim t2 as text = text.FromUnicodeCodepoint(Integer.FromHex(ttt.Mid(2, 2)))
+		      dim t3 as text = text.FromUnicodeCodepoint(Integer.FromHex(ttt.Mid(4, 2)))
+		      dim t4 as text = text.FromUnicodeCodepoint(Integer.FromHex(ttt.Mid(6, 2)))
+		      Me.Write(t1+t2+t3+t4)
 		      // Now we pipe the data back to the client
 		      Me.Write(MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf)
 		      

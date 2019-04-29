@@ -2,8 +2,8 @@
 Protected Class MyHTTPRequest
 	#tag Method, Flags = &h0
 		Sub Constructor(pHTTPServer As MyHTTPServer)
-		  Dim pNow As New Date
-		  
+		  Dim pNow As Xojo.Core.Date
+		  pNow = xojo.core.date.now
 		  // Server that emmited the Request
 		  Me.Parent = pHTTPServer
 		  
@@ -16,7 +16,7 @@ Protected Class MyHTTPRequest
 		  Me.Headers.Value("Date") = pNow.HTTPDate
 		  
 		  // Expire Date
-		  pNow.Minute = pNow.Minute' + 60
+		  pNow = pNow.Minute(pNow.Minute + 60)
 		  Me.Headers.Value("Expires") = pNow.HTTPDate
 		  
 		  // Default Content Type
@@ -123,7 +123,7 @@ Protected Class MyHTTPRequest
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub SetCookie(Name As String, Value As String = "", Expire As Date = nil, Path As String = "/", Domain As String = ".", Secure As Boolean = False)
+		Sub SetCookie(Name As String, Value As String = "", Expire As Xojo.Core.Date = nil, Path As String = "/", Domain As String = ".", Secure As Boolean = False)
 		  Dim s As String = name + "=" + value
 		  
 		  If domain <> "." Then
@@ -243,6 +243,7 @@ Protected Class MyHTTPRequest
 			Name="RequestBody"
 			Group="Behavior"
 			Type="String"
+			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Status"
