@@ -133,7 +133,7 @@ Inherits TCPSocket
 		      
 		      // HTTP requests rely on the Content-Length header. Rather than require the user to set
 		      // the header, we simply add it based on the buffer size.
-		      Me.Context.Headers.Value(MyHTTPServerModule.kheadercontentlength) = LenB(context.Body)
+		      Me.Context.Headers.Value(MyHTTPServerModule.kheadercontentlength) = context.Body.Bytes
 		      
 		      // Only support close connection, so even if the handler set it
 		      // to keep-alive, we tell the client the truth.
@@ -141,8 +141,17 @@ Inherits TCPSocket
 		      
 		      Me.Context.Headers.Value(MyHTTPServerModule.kHeaderServer) = MyHTTPServerModule.VersionLongString
 		      
+		      //write first 4 bytes datasize
+		      dim hSize as Integer
+		      For Each pKey As String In Me.Context.Headers.Keys
+		        'Me.write(context.headers.key(i).stringvalue + ": " + URLEncode(context.headers.value(context.headers.key(i)).stringvalue) + MyHTTPServerModule.crlf)
+		        dim sss as string
+		        sss = (pKey + ": " + Me.Context.Headers.Value(pKey) + MyHTTPServerModule.crlf)
+		        hSize = hSize + sss.bytes
+		      Next
+		      
 		      // Now we pipe the data back to the client
-		      Me.Write(MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf)
+		      Me.Write(IntToHex(context.Body.Bytes+hSize+4) + MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf)
 		      
 		      For Each pKey As String In Me.Context.Headers.Keys
 		        'Me.write(context.headers.key(i).stringvalue + ": " + URLEncode(context.headers.value(context.headers.key(i)).stringvalue) + MyHTTPServerModule.crlf)
@@ -233,21 +242,25 @@ Inherits TCPSocket
 			Name="Address"
 			Visible=true
 			Group="Behavior"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Index"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="Integer"
-			EditorType="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
-			EditorType="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Port"
@@ -255,18 +268,23 @@ Inherits TCPSocket
 			Group="Behavior"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Super"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
-			EditorType="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Identifier"
+			Visible=false
 			Group="Behavior"
+			InitialValue=""
 			Type="Int64"
+			EditorType=""
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class

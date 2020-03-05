@@ -2549,6 +2549,27 @@ Protected Module MyHTTPServerModule
 		End Function
 	#tag EndMethod
 
+	#tag Method, Flags = &h0
+		Function IntToHex(i as Integer) As String
+		  dim t as string = i.ToBinary(4)
+		  
+		  while t.Length < 32
+		    t = "0"+t
+		  wend
+		  dim s as string
+		  dim z as Integer = 0
+		  while z < 32
+		    z = z + 8
+		    dim l as integer = t.Length-z
+		    dim r as string = t.Middle(l, 8)
+		    dim m as integer = integer.FromBinary(r)
+		    s = Encodings.ASCII.Chr(m) + s
+		  wend
+		  
+		  Return s
+		End Function
+	#tag EndMethod
+
 	#tag Method, Flags = &h1
 		Protected Function LTrim(source As String, charsToTrim As String) As String
 		  // This is an extended version of RB's LTrim function that lets you specify
@@ -3243,6 +3264,7 @@ Protected Module MyHTTPServerModule
 			Group="ID"
 			InitialValue="-2147483648"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Left"
@@ -3250,18 +3272,23 @@ Protected Module MyHTTPServerModule
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Super"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Top"
@@ -3269,6 +3296,7 @@ Protected Module MyHTTPServerModule
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Module

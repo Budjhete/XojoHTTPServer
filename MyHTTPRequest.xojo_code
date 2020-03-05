@@ -208,7 +208,9 @@ Protected Class MyHTTPRequest
 	#tag ViewBehavior
 		#tag ViewProperty
 			Name="Body"
+			Visible=false
 			Group="Behavior"
+			InitialValue=""
 			Type="String"
 			EditorType="MultiLineEditor"
 		#tag EndViewProperty
@@ -218,6 +220,7 @@ Protected Class MyHTTPRequest
 			Group="ID"
 			InitialValue="-2147483648"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Left"
@@ -225,9 +228,11 @@ Protected Class MyHTTPRequest
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Method"
+			Visible=false
 			Group="Behavior"
 			InitialValue="GET"
 			Type="String"
@@ -237,24 +242,33 @@ Protected Class MyHTTPRequest
 			Name="Name"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="RequestBody"
+			Visible=false
 			Group="Behavior"
+			InitialValue=""
 			Type="String"
+			EditorType="MultiLineEditor"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Status"
+			Visible=false
 			Group="Behavior"
 			InitialValue="200"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Super"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Top"
@@ -262,10 +276,13 @@ Protected Class MyHTTPRequest
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="URL"
+			Visible=false
 			Group="Behavior"
+			InitialValue=""
 			Type="String"
 			EditorType="MultiLineEditor"
 		#tag EndViewProperty

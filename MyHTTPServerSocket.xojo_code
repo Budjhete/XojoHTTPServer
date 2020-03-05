@@ -8,7 +8,7 @@ Inherits ServerSocket
 	#tag EndEvent
 
 	#tag Event
-		Sub Error(ErrorCode as Integer)
+		Sub Error(ErrorCode As Integer, err As RuntimeException)
 		  System.Log(System.LogLevelError, "HTTPServSock: Error Num " + str(ErrorCode))
 		End Sub
 	#tag EndEvent
@@ -239,21 +239,19 @@ Inherits ServerSocket
 	#tag ViewBehavior
 		#tag ViewProperty
 			Name="ClientTimeOut"
+			Visible=false
 			Group="Behavior"
 			InitialValue="10"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Index"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Left"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="MaximumSocketsConnected"
@@ -261,6 +259,7 @@ Inherits ServerSocket
 			Group="Behavior"
 			InitialValue="10"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="MinimumSocketsAvailable"
@@ -268,12 +267,15 @@ Inherits ServerSocket
 			Group="Behavior"
 			InitialValue="2"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Name"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Port"
@@ -281,18 +283,15 @@ Inherits ServerSocket
 			Group="Behavior"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Super"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Top"
-			Visible=true
-			Group="Position"
-			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class
