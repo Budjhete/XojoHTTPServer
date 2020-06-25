@@ -151,17 +151,27 @@ Inherits TCPSocket
 		      Next
 		      
 		      // Now we pipe the data back to the client
-		      Me.Write(IntToHex(context.Body.Bytes+hSize+4) + MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf)
+		      dim pipeback as string = MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf
+		      
+		      if Me.Context.RequestHeaders.Lookup("X-Powered-By", "kanjo") = "kanjo.ios" then
+		        pipeback = IntToHex(context.Body.Bytes+hSize+4) + pipeback
+		      End If
+		      
+		      System.DebugLog pipeback
+		      Me.Write(pipeback)
 		      
 		      For Each pKey As String In Me.Context.Headers.Keys
 		        'Me.write(context.headers.key(i).stringvalue + ": " + URLEncode(context.headers.value(context.headers.key(i)).stringvalue) + MyHTTPServerModule.crlf)
-		        Me.Write(pKey + ": " + Me.Context.Headers.Value(pKey) + MyHTTPServerModule.crlf)
+		        dim hhh as string = pKey + ": " + Me.Context.Headers.Value(pKey) + MyHTTPServerModule.crlf
+		        System.DebugLog hhh
+		        Me.Write(hhh)
 		      Next
 		      
 		      // Break a line!
 		      Me.Write(MyHTTPServerModule.crlf)
 		      
 		      // Send the body
+		      System.DebugLog Me.Context.Body
 		      Me.Write(Me.Context.Body)
 		      
 		      // Finish it!
