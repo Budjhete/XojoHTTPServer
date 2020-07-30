@@ -52,7 +52,7 @@ Inherits TCPSocket
 		        data = Me.read(requestlength, encodings.ascii)
 		        entity = MidB(data,headerslength + 1 + LenB(MyHTTPServerModule.crlf + MyHTTPServerModule.crlf),entitylength)
 		        
-		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Recived Request, "+Str(requestlength)+" len")
+		        System.DebugLog("HTTPServer #" + Str(Me.Identifier) + ": Received Request, "+Str(requestlength)+" len")
 		        
 		      Else
 		        
@@ -154,7 +154,7 @@ Inherits TCPSocket
 		      dim pipeback as string = MyHTTPServerModule.kVersion + " " + HTTPStatusString(Me.Context.Status) + MyHTTPServerModule.crlf
 		      
 		      if Me.Context.RequestHeaders.Lookup("X-Powered-By", "kanjo") = "kanjo.ios" then
-		        pipeback = IntToHex(context.Body.Bytes+hSize+4) + pipeback
+		        me.Write(IntToHex(context.Body.Bytes+hSize+4))
 		      End If
 		      
 		      System.DebugLog pipeback

@@ -91,6 +91,14 @@ Protected Class MyHTTPRequest
 		    Me.Cookies.Value(key) = value
 		  Next
 		  
+		  
+		  if me.RequestHeaders.HasKey("Queries") then
+		    me.Queries = new xojo.core.Dictionary
+		    try
+		      me.Queries = Xojo.Data.ParseJSON(Me.RequestHeaders.Value("Queries").StringValue.DefineEncoding(Encodings.UTF8).ToText)
+		    end try
+		  end if
+		  
 		  // Get the session
 		  Dim pSessionID As Integer = Val(Me.Cookies.Lookup("session", ""))
 		  
@@ -165,6 +173,10 @@ Protected Class MyHTTPRequest
 
 	#tag Property, Flags = &h0
 		Parent As MyHTTPServer
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		Queries As Xojo.Core.Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0

@@ -3,7 +3,8 @@ Protected Class MyHTTPServerSocket
 Inherits ServerSocket
 	#tag Event
 		Function AddSocket() As TCPSocket
-		  Return New MyHTTPServer(Self)
+		  dim nHTTPsServer as New MyHTTPServer(Self)
+		  Return nHTTPsServer
 		End Function
 	#tag EndEvent
 
@@ -238,18 +239,10 @@ Inherits ServerSocket
 
 	#tag ViewBehavior
 		#tag ViewProperty
-			Name="ClientTimeOut"
-			Visible=false
-			Group="Behavior"
-			InitialValue="10"
-			Type="Integer"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Index"
+			Name="MinimumSocketsAvailable"
 			Visible=true
-			Group="ID"
-			InitialValue=""
+			Group="Behavior"
+			InitialValue="2"
 			Type="Integer"
 			EditorType=""
 		#tag EndViewProperty
@@ -262,10 +255,18 @@ Inherits ServerSocket
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="MinimumSocketsAvailable"
-			Visible=true
+			Name="ClientTimeOut"
+			Visible=false
 			Group="Behavior"
-			InitialValue="2"
+			InitialValue="10"
+			Type="Integer"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Index"
+			Visible=true
+			Group="ID"
+			InitialValue=""
 			Type="Integer"
 			EditorType=""
 		#tag EndViewProperty
