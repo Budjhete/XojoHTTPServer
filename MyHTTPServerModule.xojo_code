@@ -2838,7 +2838,7 @@ Protected Module MyHTTPServerModule
 		
 		     layout.gif
 		          This might represent files and formats that contain graphics as
-		          well as text layout, such as HTML and PDF files.
+		          well as String layout, such as HTML and PDF files.
 		
 		     link.gif
 		          This might represent files that are symbolic links.

@@ -93,7 +93,7 @@ Protected Class MyHTTPRequest
 		  
 		  
 		  if me.RequestHeaders.HasKey("Queries") then
-		    me.Queries = new xojo.core.Dictionary
+		    me.Queries = new Dictionary
 		    try
 		      me.Queries = Xojo.Data.ParseJSON(Me.RequestHeaders.Value("Queries").StringValue.DefineEncoding(Encodings.UTF8).ToText)
 		    end try
@@ -176,7 +176,7 @@ Protected Class MyHTTPRequest
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		Queries As Xojo.Core.Dictionary
+		Queries As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
